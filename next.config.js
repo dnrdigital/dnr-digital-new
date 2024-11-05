@@ -3,4 +3,14 @@ const nextConfig = {
   reactStrictMode: true
 };
 
-module.exports = nextConfig;
+module.exports = {
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      {
+        hostname: "images.unsplash.com",
+      },
+    ],
+  },
+}
+

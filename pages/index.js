@@ -1,23 +1,36 @@
-import Head from 'next/head'
-import Header from '@components/Header'
-import Footer from '@components/Footer'
+// pages/index.js
+import Head from "next/head";
+import Main from "@components/Main";
 
-export default function Home() {
+export async function getServerSideProps() {
+  try {
+    const res = await fetch(`http://localhost:3000/api/imageCache`);
+    const json = await res.json();
+
+    return {
+      props: {
+        background: json.data || null, // Pass the data to the component
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching data in getServerSideProps:", error);
+    return {
+      props: {
+        background: null, // Pass null if there's an error
+      },
+    };
+  }
+}
+
+export default function Home({ background }) {
   return (
-    <div className="container">
+    <>
       <Head>
-        <title>Next.js Starter!</title>
+        <title>DNR | Digital Consultancy</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <main>
-        <Header title="Welcome to my app!" />
-        <p className="description">
-          Get started by editing <code>pages/index.js</code>
-        </p>
-      </main>
-
-      <Footer />
-    </div>
-  )
+      <Main background={background} />{" "}
+      {/* Pass the data to the Main component */}
+    </>
+  );
 }
