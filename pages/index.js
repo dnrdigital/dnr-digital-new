@@ -4,7 +4,7 @@ import Main from "@components/Main";
 
 export async function getServerSideProps() {
   try {
-    const res = await fetch(`http://localhost:3000/api/imageCache`);
+    const res = await fetch(`https://dnr.digital/api/imageCache`);
     const json = await res.json();
 
     return {
