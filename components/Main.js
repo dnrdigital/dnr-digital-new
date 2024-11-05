@@ -43,7 +43,7 @@ export default function Main({ background }) {
         style={{ color: `${background.color}` }}
       >
         <h1 className="-my-4 md:-my-8 lg:-my-16 xl:-my-20 font-display font-bold group-hover:text-white group-hover:opacity-80 transition duration-1000 shadow-2xl">
-          <span class="text-fit">
+          <span className="text-fit">
             <span>
               <span>DNR.DIGITAL</span>
             </span>
@@ -51,7 +51,7 @@ export default function Main({ background }) {
           </span>
         </h1>
         <p className="mb-12 font-sans font-bold lowercase group-hover:text-white group-hover:opacity-80 transition duration-1000 shadow-2xl">
-          <span class="text-fit">
+          <span className="text-fit">
             <span>
               <span>
                 Consulting | strategy | procurement | project&nbsp;management
@@ -63,7 +63,7 @@ export default function Main({ background }) {
           </span>
         </p>
         <p className="w-1/3 md:w-1/5 mx-auto font-sans font-bold group-hover:text-white transition duration-1000 shadow-2xl">
-          <span class="text-fit">
+          <span className="text-fit">
             <span>
               <span>
                 <a href="mailto:duncan@dnr.digital">Get in touch.</a>
