@@ -3,65 +3,72 @@ import fs from 'fs';
 import path from 'path';
 import { createApi } from 'unsplash-js';
 
-const UNSPLASH_API_KEY = "F_0fGmEHG_V2WdCGchRaTAVh06AqVjf8GVSgCgT_XLg"
-
-const api = createApi({
-  accessKey: UNSPLASH_API_KEY,
-});
-
-// In-memory cache (useful for serverless or edge environments)
-let memoryCache = null;
-const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 1 week
-let lastCacheTime = 0;
-
+const UNSPLASH_API_KEY = "F_0fGmEHG_V2WdCGchRaTAVh06AqVjf8GVSgCgT_XLg";
+const api = createApi({ accessKey: UNSPLASH_API_KEY });
 const filePath = path.join(process.cwd(), 'data', 'imageCache.json');
 
-async function fetchImageData() {
-  const response = await api.photos.getRandom({ count: 1, collection: ['bo8jQKTaE0Y'], orientation: 'landscape' });
-  
-  if (!response.response || response.errors) {
-    throw new Error('Failed to fetch data from Unsplash API');
-  }
-  
-  return response.response[0];
-}
-
-async function updateCache() {
-  const imageData = await fetchImageData();
-
-  // Update both memory cache and file cache (if writable)
-  memoryCache = imageData;
-  lastCacheTime = Date.now();
-
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(imageData), 'utf8');
-  } catch (error) {
-    console.error("Error saving to file cache, falling back to in-memory cache:", error);
-  }
-}
+// Initialize an in-memory cache variable
+let memoryCache = null;
 
 export default async function handler(req, res) {
   try {
-    // Check if memory cache is available and not expired
-    if (memoryCache && (Date.now() - lastCacheTime < CACHE_EXPIRY)) {
-      return res.status(200).json({ data: memoryCache });
+    // Step 1: Serve from Memory Cache if available
+    if (memoryCache) {
+      res.status(200).json({ data: memoryCache });
+      // Update cache in the background without delaying response
+      updateCache();
+      return;
     }
 
-    // Try to read from file cache if memory cache is empty
+    // Step 2: Load from File Cache if Memory Cache is empty
     if (fs.existsSync(filePath)) {
       const fileData = fs.readFileSync(filePath, 'utf8');
-      memoryCache = JSON.parse(fileData); // Load into memory
-      lastCacheTime = Date.now();
+      memoryCache = JSON.parse(fileData);
+      res.status(200).json({ data: memoryCache });
+      // Update cache in the background
+      updateCache();
+      return;
+    }
 
-      res.status(200).json({ data: memoryCache });
-      updateCache().catch(console.error); // Asynchronously update the cache
-    } else {
-      // Fetch new data if no cache is available
-      await updateCache();
-      res.status(200).json({ data: memoryCache });
+    // Step 3: Fetch from API if no cache is available, update both memory and file cache
+    const imageData = await fetchNewImageData();
+    if (imageData) {
+      memoryCache = imageData;
+      fs.writeFileSync(filePath, JSON.stringify(imageData), 'utf8');
+      res.status(200).json({ data: imageData });
+      return;
+    }
+
+    // Error handling if no image data is available
+    res.status(500).json({ error: 'Failed to retrieve data' });
+  } catch (error) {
+    console.error('Error in API route:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+}
+
+// Helper function to fetch new image data and update the cache
+async function fetchNewImageData() {
+  try {
+    const response = await api.photos.getRandom({ count: 1, collection: ['bo8jQKTaE0Y'], orientation: 'landscape' });
+    if (response.response && !response.errors) {
+      return response.response[0];
     }
   } catch (error) {
-    console.error("Error in API route:", error);
-    res.status(500).json({ error: 'Failed to retrieve or save data' });
+    console.error('Error fetching image from Unsplash:', error);
+  }
+  return null;
+}
+
+// Asynchronous cache updater
+async function updateCache() {
+  const newImageData = await fetchNewImageData();
+  if (newImageData) {
+    memoryCache = newImageData; // Update memory cache
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(newImageData), 'utf8'); // Update file cache if possible
+    } catch (fileError) {
+      console.error('Failed to write data to file cache:', fileError);
+    }
   }
 }
