@@ -9,7 +9,7 @@ export default function Main({ background }) {
 
   if (typeof window !== "undefined") {
     const dimensions = getWindowDimensions();
-    const urlQuery = width > height ? `&w=${width}` : `&h=${height}`;
+    const urlQuery = dimensions.width > dimensions.height ? `&w=${dimensions.width}` : `&h=${dimensions.height}`;
     console.log(urlQuery, dimensions.dpr);
   }
 
