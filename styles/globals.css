@@ -71,6 +71,45 @@
   text-shadow: 0 2px 8px rgb(0 0 0 / 30%);
 }
 
+/* Run once on page entry, independently of photo loading or dice changes.
+   Backwards fill covers the stagger without overriding the existing hover
+   opacity after the animation ends. No layout-affecting properties animate. */
+.intro-heading, .intro-subtitle, .intro-contact {
+  animation: text-arrive .65s cubic-bezier(.22, 1, .36, 1) backwards;
+}
+.intro-heading { animation-delay: .05s; }
+.intro-subtitle { animation-delay: .15s; }
+.intro-contact { animation-delay: .25s; }
+@keyframes text-arrive {
+  from { opacity: 0; transform: translateY(10px); }
+  to { transform: translateY(0); }
+}
+
+.contact-link {
+  position: relative;
+  display: inline-block;
+  transition: transform .22s ease;
+}
+.contact-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -.12em;
+  height: .06em;
+  min-height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .22s ease;
+}
+.contact-link:focus-visible { transform: translateY(-2px); }
+.contact-link:focus-visible::after { transform: scaleX(1); }
+@media (hover: hover) and (pointer: fine) {
+  .contact-link:hover { transform: translateY(-2px); }
+  .contact-link:hover::after { transform: scaleX(1); }
+}
+
 .photo {
   filter: grayscale(20%) contrast(140%) brightness(80%);
 }
@@ -124,6 +163,9 @@ a:focus-visible {
 @keyframes tumble { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
+  .intro-heading, .intro-subtitle, .intro-contact { animation: none; }
+  .contact-link, .contact-link::after { transition: none; }
+  .contact-link:hover, .contact-link:focus-visible { transform: none; }
   .die-tumbling { animation: none; }
   .scenery-current { transition: none; }
   .scenery-die svg { transition: none; }

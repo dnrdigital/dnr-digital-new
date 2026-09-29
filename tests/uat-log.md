@@ -119,3 +119,11 @@ Quality 65 showed no obvious visual regression in the side-by-side review; resul
 - Visually inspected the generated D icon. Decoded every ICO entry and verified its actual dimensions; Apple touch PNG is 180 × 180. All three versioned asset URLs returned HTTP 200 with appropriate image MIME types from the local production server.
 - Browser page renders normally and exposes the icon declarations. The automation extension badges favicons on controlled tabs, so raw HTTP head output and decoded icon assets were used to verify the original favicon rather than treating that modified tab icon as production evidence.
 - All 28 tests, production build and npm audit pass; zero vulnerabilities. No dependencies or application behaviour changed, and no new automated tests were needed for the static asset change.
+
+## 29 September 2026 — text entrance and contact hover
+
+- Added a 650ms fade/rise with 50/150/250ms delays for heading, subtitle and contact. CSS animates opacity/transform only and releases its values after finishing, preserving existing colour/opacity interactions. The entrance is independent of image loading and is not keyed to photo changes.
+- A temporary local HTTP fixture added event observation only: recorded exactly three text-arrive starts in heading/subtitle/contact order and three ends. Mid-animation computed values confirmed the stagger (heading opacity ~0.68, subtitle ~0.22, contact 0). Dice activation did not add any entrance events.
+- Keyboard Tab reaches the mailto link; focus has a visible outline, a -2px vertical lift and a fully drawn underline. Pointer hover uses the same CSS effects, gated to fine pointers with hover capability; no mail application was launched during verification.
+- A separate temporary fixture forced the existing prefers-reduced-motion CSS branch to match without changing OS preferences. All three text blocks were immediately visible with animation:none and transform:none; focused contact had no transform, a 0s transition and the visible underline. At 390 × 844 the document width remained 390px with no horizontal overflow.
+- No application console warnings/errors. All 28 tests, production build and npm audit pass (zero vulnerabilities). No dependencies, new JavaScript or automated test files added for this presentation change; temporary fixtures are outside the repository.
