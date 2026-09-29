@@ -46,7 +46,7 @@ test("missing store uses bundled photos; a custom collection never falls back to
   assert.deepEqual(await createPoolReader({ store, collection: () => "custom" })(), []);
 });
 
-test("overlapping refreshes reserve one request, retain tracking metadata, and limit attempts to hourly", async () => {
+test("overlapping refreshes reserve one request per clock hour and retain tracking metadata", async () => {
   const store = memoryStore();
   let calls = 0;
   const options = { store, key: "test", collection: "curated", now: () => 1000,
@@ -65,6 +65,36 @@ test("overlapping refreshes reserve one request, retain tracking metadata, and l
   assert.equal((await refreshPool(options)).status, "backoff");
   await refreshPool({ ...options, now: () => HOUR + 1000 });
   assert.equal(calls, 2);
+});
+
+test("hourly cron jitter does not prevent all three themes entering the pool", async () => {
+  const store = memoryStore();
+  const queried = [];
+  for (const time of [13 * HOUR + 39 * 60_000, 14 * HOUR + 57_000, 15 * HOUR + 54_000]) {
+    const result = await refreshPool({ store, key: "test", now: () => time,
+      fetchImages: async (url) => {
+        const query = url.searchParams.get("query");
+        queried.push(query);
+        return ok([photo(query)]);
+      } });
+    assert.equal(result.status, "fresh");
+    assert.equal(result.nextAttempt, (Math.floor(time / HOUR) + 1) * HOUR);
+    assert.equal((await refreshPool({ store, key: "test", now: () => time + 1,
+      fetchImages: () => assert.fail("same-hour retry must not request") })).status, "backoff");
+  }
+  assert.deepEqual(queried, ["brutalist architecture", "volcanic landscape", "aerial farmland"]);
+  assert.equal((await store.get()).images.length, 3);
+});
+
+test("a failed refresh waits a full hour even just before the next clock hour", async () => {
+  const store = memoryStore();
+  const time = HOUR - 1000;
+  const result = await refreshPool({ store, key: "test", now: () => time,
+    fetchImages: async () => { throw new Error("offline"); } });
+  assert.equal(result.failure, "request-failed");
+  assert.equal(result.nextAttempt, time + HOUR);
+  assert.equal((await refreshPool({ store, key: "test", now: () => HOUR,
+    fetchImages: () => assert.fail("failure cooldown must survive hour boundary") })).status, "backoff");
 });
 
 for (const [name, failure] of [
@@ -131,6 +161,36 @@ test("preview and unpublished scheduled functions cannot write the production po
   assert.equal(config.schedule, "0 * * * *");
   for (const deploy of [{ context: "deploy-preview", published: false }, { context: "production", published: false }]) {
     assert.equal((await handler(null, { deploy })).status, 204);
+  }
+});
+
+test("scheduled events without HTTP deploy metadata refresh; preview and invalid events skip", async () => {
+  const cache = require("../lib/image-cache");
+  const { default: handler } = await import("../netlify/functions/refresh-photos.mjs");
+  const originalStore = cache.photoStore, originalRefresh = cache.refreshPool;
+  let calls = 0;
+  cache.photoStore = () => ({});
+  cache.refreshPool = async () => { calls++; return { status: "test-refresh" }; };
+  const event = (body = { next_run: "2026-09-29T15:00:00.000Z" }, headers = {}) =>
+    new Request("https://example.invalid/refresh-photos", { method: "POST", body: JSON.stringify(body), headers });
+  try {
+    await handler(event(), { deploy: { context: "", published: false } });
+    assert.equal(calls, 1);
+    await handler(event(), { deploy: { context: "production", published: true } });
+    assert.equal(calls, 2);
+    await handler(event(), { deploy: { context: "production", published: false } });
+    assert.equal(calls, 3, "A timer may also omit only the published header");
+    for (const deploy of [{ context: "deploy-preview", published: false },
+      { context: "branch-deploy", published: false }, { context: "production", published: false }]) {
+      await handler(event(undefined, { "x-nf-deploy-published": "0" }), { deploy });
+    }
+    await handler(event({}, {}), { deploy: {} });
+    await handler(event({ next_run: "invalid" }), { deploy: {} });
+    await handler(event(undefined, { "x-nf-deploy-published": "0" }), { deploy: {} });
+    assert.equal(calls, 3, "Only scheduled events and the published production manual run refresh");
+  } finally {
+    cache.photoStore = originalStore;
+    cache.refreshPool = originalRefresh;
   }
 });
 
