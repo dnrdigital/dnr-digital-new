@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { createImageCache } = require("../lib/image-cache");
+const { createImageCache, toPageBackground } = require("../lib/image-cache");
 
 const photo = (id) => ({ id, urls: { full: `https://images.unsplash.com/${id}` } });
 const ok = (images) => ({ ok: true, json: async () => images });
@@ -88,4 +88,31 @@ test("unusable or absent photos return null for the page's local fallback", asyn
 test("a failed refresh with no saved photos still returns the fallback", async () => {
   const get = createImageCache({ images: [], accessKey: () => "test-key", fetchImages: async () => ok([]) });
   assert.equal(await get(), null);
+});
+
+test("page props omit unused metadata without changing the cached API photo", async () => {
+  const image = {
+    ...photo("saved"), color: "#123456", description: "unused metadata",
+    user: { name: "Photographer", username: "photographer", bio: "unused profile" },
+    links: { download: "https://unsplash.com/download" },
+  };
+  const get = createImageCache({ images: [image], accessKey: () => "" });
+  const apiPhoto = await get();
+  const pagePhoto = toPageBackground(apiPhoto);
+  assert.equal(pagePhoto.urls.full, image.urls.full);
+  assert.equal(pagePhoto.color, image.color);
+  assert.deepEqual(pagePhoto.user, { name: "Photographer", username: "photographer" });
+  assert.equal(pagePhoto.description, undefined);
+  assert.equal(pagePhoto.links, undefined);
+  assert.equal(pagePhoto.user.bio, undefined);
+  assert.equal(apiPhoto.description, "unused metadata");
+  assert.equal(apiPhoto.user.bio, "unused profile");
+});
+
+test("page props preserve the empty-cache fallback and are serializable without optional metadata", () => {
+  assert.equal(toPageBackground(null), null);
+  const minimal = toPageBackground(photo("minimal"));
+  assert.deepEqual(JSON.parse(JSON.stringify(minimal)), minimal);
+  assert.equal(minimal.color, "#10293a");
+  assert.equal(minimal.user.username, null);
 });

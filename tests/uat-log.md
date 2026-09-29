@@ -24,3 +24,45 @@ The image-failure browser check used a temporary localhost proxy to replace the 
 Release checks still pending: replacement Unsplash key, Netlify environment/runtime settings, deployment smoke checks and GitHub's default-branch security rescan. Reduced-motion CSS is implemented but was not separately exercised in the browser.
 
 Netlify preview for PR #2 failed before build execution: `git@github.com: Permission denied (publickey)` while cloning `dnrdigital/dnr-digital-new`. Repository access must be restored before preview/deployment can be verified. Log: https://app.netlify.com/projects/dnr-digital/deploys/6abb881d320f0c00082cb6c1
+
+## Production verification — 29 September 2026
+
+PR #2 merged as `9f63c47`. Netlify deployment `6abb90e46c80fd0008af8413` completed and reported the site live at 11:21 BST. The repository mismatch was corrected: the project had been linked to `dnrdigital/dnr-digital`, whereas this application's repository is `dnrdigital/dnr-digital-new`.
+
+- `https://dnr.digital/` returned 200 with the new document language and contact link.
+- `/api/imageCache` returned 200 with `Cache-Control: no-store`.
+- A production photo URL returned 200 with an image content type.
+- GitHub reported zero open Dependabot alerts; superseded Dependabot PR #1 was closed.
+- Duncan confirmed the Unsplash key was updated. Sampled production photo IDs still belonged to the bundled snapshot; a fresh authenticated refresh remains unverified.
+
+Follow-up: Netlify’s signed-in environment settings for `dnr-digital` show “No environment variables set for this project”. Add `UNSPLASH_ACCESS_KEY` and redeploy before verifying fresh Unsplash refreshes. The key update itself is confirmed by Duncan.
+
+Final credential verification: after Duncan configured `UNSPLASH_ACCESS_KEY` and redeployed, the production homepage returned photo `vrwkh1Jrozs` and `/api/imageCache` returned `QEvJmLVzlgQ`. Neither exists in the bundled snapshot, confirming successful fresh Unsplash fetches. Both routes returned HTTP 200, and the homepage photo returned HTTP 200 with `image/jpeg`. GitHub still reports zero open Dependabot alerts. All release checklist items are complete.
+
+## Performance polish — 29 September 2026
+
+Local production build, Node 24.19.0 / Next.js 15.5.26. No dependency changes.
+
+| Check | Result |
+| --- | --- |
+| Automated regression tests | 15 pass, including page-props serialization and preservation of the API photo |
+| Production build / npm audit | Pass / zero vulnerabilities |
+| Adobe Fonts stylesheet | Direct link in document head; no Typekit import in generated application CSS |
+| Connection hints | Font host and Unsplash image host present in document head |
+| Image quality | Rendered image and srcset use quality 65; tracking parameters retained |
+| Desktop 1440 × 900 | Photo loaded, FatFrank rendered, attribution/contact intact, no browser warnings/errors |
+| Mobile 390 × 844 | Photo loaded at 640px source width; content fits without horizontal overflow; contact keyboard focus visible |
+| Homepage/API smoke checks | HTTP 200; API retains full photo metadata; POST still returns 405 |
+| Homepage photo props, same saved photo | 4,220 → 275 bytes JSON (93.5% smaller) |
+| Standalone props Brotli compression | 1,222 → 217 bytes; this is a payload comparison, not a measurement of full-page wire bytes |
+
+Compared four 1440px AVIF photos with the site's existing visual treatment:
+
+| Photo | Quality 75 bytes | Quality 65 bytes | Saving |
+| --- | ---: | ---: | ---: |
+| Ocean through car window (`N90UFM6fTHQ`) | 17,210 | 15,049 | 12.6% |
+| Coloured shapes (`h0aDp_wUtyM`) | 37,865 | 33,836 | 10.6% |
+| Sports car (`96ES9AOLRzQ`) | 48,724 | 45,191 | 7.3% |
+| City street (`0jvACDxsB7U`) | 91,791 | 84,050 | 8.4% |
+
+Quality 65 showed no obvious visual regression in the side-by-side review; results vary by photograph, format and viewport. Adobe's hosted CSS still specifies `font-display: auto`; the shared Adobe project was not changed. No throttled Lighthouse/Core Web Vitals score is claimed. Page caching and rotation frequency remain unchanged. Production rollout requires approval.

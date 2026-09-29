@@ -24,7 +24,9 @@ The old key was committed to repository history. Rotate it in Unsplash before de
 - Refreshes time out after 2.5 seconds and retain the last good photos on errors, invalid responses or rate limits. The bundled JSON is a read-only starting snapshot; nothing writes to the deployed filesystem.
 - Caches are per serverless instance, not a global rate limiter. Cold starts can each make a request. If traffic grows, revisit shared caching or scheduled refreshes against the actual Unsplash quota.
 - If a remote image fails, the existing local `public/background.jpg` is shown with white text. The consultancy content and contact link remain usable even if both images fail.
-- Responsive images load directly from Unsplash’s image CDN with its tracking parameters preserved, avoiding a second optimization proxy. Photographers and Unsplash are credited. Adobe Fonts remains an external dependency, with CSS font fallbacks.
+- Responsive images load directly from Unsplash’s image CDN at quality 65 with its tracking parameters preserved, avoiding a second optimization proxy. Photographers and Unsplash are credited. Adobe Fonts remains an external dependency, with CSS font fallbacks. Its stylesheet is linked directly in the document head, with connection hints for the font and image hosts. Font-display is controlled by the Adobe web project.
+
+The homepage serializes only image URL, colour and photographer attribution into its page props. The image API retains its full photo response. Page rendering and photo rotation are unchanged; no page caching has been added.
 
 ## Verification
 
