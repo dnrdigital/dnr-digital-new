@@ -42,4 +42,11 @@
 - [x] Test API failures, exhausted quota, concurrent/cold instances, repeat avoidance and attribution during transitions. Browser outage simulation retains the displayed image; see UAT log.
 - [x] Draft accurate application description, curation criteria and unresolved download-event question in `docs/unsplash-production.md`.
 - [ ] Capture final deployed desktop/mobile attribution evidence and submit only after the download-event requirement is resolved.
-- [ ] Review preview PR; merge/deploy after approval and verify published scheduler/Blobs persistence.
+- [x] PR #4 merged as `c30316e`; deployed scheduler invocation reported by Duncan.
+- [ ] Verify published scheduler/Blobs persistence after the missing-SDK packaging fix.
+
+## Scheduled function runtime fix
+- [x] Reproduce missing `@netlify/blobs` in Netlify's packaged native function.
+- [x] Make the native SDK import explicit and verify the isolated package with mocked HTTP.
+- [x] Run source tests, production build and security audit; document repeatable packaging smoke test.
+- [ ] Merge/deploy fix after approval; verify first live refresh and durable snapshot.

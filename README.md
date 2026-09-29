@@ -61,3 +61,24 @@ The `next.postcss` override uses the project's patched PostCSS 8 version because
 Netlify runs `npm run build` and publishes `.next` using its Next.js adapter. The site needs a server runtime; it cannot use `next export`. Node 24 is selected by `.nvmrc` and `engines.node`. Check any existing Netlify `NODE_VERSION` and function runtime overrides before deploying.
 
 Merge and deployment require Duncan's approval. Before deployment, rotate/configure the Unsplash access key. After deployment, check the homepage, image loading, photo attribution, email link and `/api/imageCache`, then check GitHub's Dependabot alerts on `main`. Alerts will remain open until the patched lockfile reaches the default branch and GitHub rescans it. Dependabot PR #1 is superseded by this refresh and can be closed after merge.
+
+### Scheduled-function packaging check
+
+The native scheduled function explicitly imports `getStore` from `@netlify/blobs` and passes it to the shared store factory. Keep that import: Netlify's native-function packaging can miss an SDK dependency referenced only through the shared CommonJS module, even when the Next.js build and source tests pass.
+
+For a packaging regression check, run these commands from the project root in a local terminal (Node 24). The packager is installed under `/tmp`, not added to the project's dependencies:
+
+```sh
+npm install --prefix /tmp/dnr-function-packaging @netlify/zip-it-and-ship-it@16.2.2
+node --input-type=module - <<'JS'
+import { zipFunctions } from '/tmp/dnr-function-packaging/node_modules/@netlify/zip-it-and-ship-it/dist/main.js';
+const root = process.cwd();
+await zipFunctions(`${root}/netlify/functions`, '/tmp/dnr-packaged-check', {
+  archiveFormat: 'none', basePath: root, repositoryRoot: root,
+  config: { '*': { nodeVersion: '24.x' } },
+});
+JS
+env -i PATH="$PATH" node tests/packaged-function-smoke.mjs /tmp/dnr-packaged-check/refresh-photos/netlify/functions/refresh-photos.mjs
+```
+
+The smoke test loads the isolated packaged function, uses synthetic credentials and intercepts all HTTP. It verifies SDK resolution, snapshot persistence, the cooldown and the preview write guard without calling Unsplash or Netlify. Actual production runtime credentials and the first live write still require post-deployment verification.
