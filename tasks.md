@@ -14,7 +14,8 @@
 - [x] Add regression coverage and record browser UAT.
 
 ## Release (requires approval)
-- [ ] Restore Netlify’s GitHub repository access: preview #2 fails while cloning with `Permission denied (publickey)` before the build runs.
+- [x] Restore access for production builds: Duncan confirmed `main` deployed successfully on 29 September 2026.
+- [ ] Verify PR #2 preview access: retry reports `git ref pull/2/head does not exist`; GitHub confirms the ref exists and Duncan confirms the linked repository is correct. Trigger a fresh preview after reconnection.
 - [ ] Rotate the exposed Unsplash access key; configure the replacement in Netlify.
 - [ ] Review and approve the refresh PR, then merge/deploy.
 - [ ] Verify production and confirm GitHub closes all 50 alerts after the default branch updates.
