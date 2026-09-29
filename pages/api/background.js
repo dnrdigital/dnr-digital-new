@@ -1,4 +1,5 @@
-import { getPool, toPageBackground } from "../../lib/image-cache";
+import { getPool } from "../../lib/image-cache";
+import { toPageBackground } from "../../lib/photo-props";
 import { readHistory, choosePhoto, historyCookie } from "../../lib/photo-rotation";
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "private, no-store");
