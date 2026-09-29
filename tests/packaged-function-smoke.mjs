@@ -43,13 +43,16 @@ globalThis.fetch = async (input, options = {}) => {
 };
 const { default: handler } = await import(pathToFileURL(process.argv[2]).href);
 const production = { deploy: { context: "production", published: true } };
-assert.equal((await handler(null, production)).status, 204);
+const scheduledRequest = () => new Request("https://example.invalid/refresh-photos", {
+  method: "POST", body: JSON.stringify({ next_run: "2026-09-29T15:00:00.000Z" }),
+});
+assert.equal((await handler(scheduledRequest(), { deploy: { context: "", published: false } })).status, 204);
 assert.equal(saved.status, "fresh");
 assert.equal(saved.images[0].id, photo.id);
 assert.equal(writes, 2, "Reservation and completed snapshot both written");
 assert.equal(discoveries, 1);
 await handler(null, production);
 assert.equal(discoveries, 1, "Cooldown must prevent a second discovery request");
-await handler(null, { deploy: { context: "deploy-preview", published: false } });
+await handler(scheduledRequest(), { deploy: { context: "deploy-preview", published: false } });
 assert.equal(writes, 2, "Preview must not write");
 console.log("Packaged function passed: SDK loads, refresh persists, cooldown and preview guard work (mock HTTP only).");

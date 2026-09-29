@@ -77,4 +77,12 @@
 - [x] Add a subtle staggered heading, subtitle and link entrance on page load only.
 - [x] Add a gentle lift and drawn underline for contact hover and keyboard focus, with reduced-motion support.
 - [x] Verify browser animation events, no replay on dice changes, keyboard focus, reduced-motion CSS and mobile layout; 28 tests, build and audit pass.
-- [ ] Merge/deploy the text-motion PR after review.
+- [x] Text-motion PR #9 merged as `636dc36`; production deployment not separately verified in this follow-up.
+
+## Missing themes in scheduled rotation — 29 September 2026
+- [x] Inspect live scheduler history: 14:00:57 and 15:00:54 BST invocations show duration only, bypassing the refresh log at the deployment guard.
+- [x] Handle scheduled events without HTTP deployment metadata; retain explicit preview/unpublished checks and log rejected runs.
+- [x] Reproduce and fix cron timing jitter skipping the following hour; retain full failure backoff and atomic reservations.
+- [x] Add regression checks for all three themed batches and useful counts/failure/retry logging.
+- [x] Complete 31 tests, production build, clean audit and isolated packaged-function verification; prepare fix PR.
+- [ ] After approved merge/deploy, verify automatic refresh logs and positive counts for all three themes in production.
