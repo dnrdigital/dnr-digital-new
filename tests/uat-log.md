@@ -80,3 +80,12 @@ Quality 65 showed no obvious visual regression in the side-by-side review; resul
 - Follow-up browser fault check: a deliberately broken initial Unsplash URL plus unavailable alternatives produced exactly three recovery attempts, then a loaded `/background.jpg`, white heading text and an available retry control.
 - Netlify preview for PR #4, code commit `e0517af`: build/checks passed. Three deployed HTTP reloads plus a shuffle returned four different IDs with private/no-store responses and history cookies. Deployed browser shuffle loaded its replacement, updated the credit, retained focus and emitted no console warnings/errors. Production-only scheduled writes remain intentionally untested before merge.
 - Pre-deployment adjustment requested by Duncan: removed the redundant “New scenery” success message. Browser check confirmed a different loaded photo and updated top credit, an empty status region, and identical button top position before/after (928px). Retry feedback remains. All 22 tests, production build, dependency audit and diff checks pass.
+
+## 29 September 2026 — scheduled function dependency packaging
+
+- Duncan reported `MODULE_NOT_FOUND: @netlify/blobs` from the published `refresh-photos.mjs` invocation at 12:32. PR #4 was merged as `c30316e`; the scheduler's first successful live cache refresh remains unverified.
+- Reproduced the exact missing-module failure using Netlify zip-it-and-ship-it 16.2.2 and an isolated native v2 function package outside the repository. The original package contained the shared application code but omitted the SDK.
+- Fix: explicitly import the SDK's `getStore` in the native ESM function and inject it into the shared store factory. Netlify now traces and includes the Blobs SDK and its runtime dependencies. No dependency versions, credentials, quotas or schedule changed.
+- Isolated packaged smoke test passed with an empty inherited environment, synthetic credentials and mocked HTTP only: SDK loads; conditional reservation and completed snapshot are written; one mocked Unsplash discovery; second invocation observes cooldown; preview invocation cannot write. No production cache mutation or API quota consumption during testing.
+- All 22 source tests, Next.js production build, dependency audit (zero findings) and diff checks pass. Next's homepage and background API traces also include the Blobs SDK.
+- Remaining: merge/deploy the fix after approval and run the published production scheduler once, then confirm a fresh snapshot in Blobs and rotation on the live site.
