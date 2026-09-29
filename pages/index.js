@@ -1,9 +1,9 @@
 import Head from "next/head";
 import Main from "@components/Main";
-import { getBackground } from "../lib/image-cache";
+import { getBackground, toPageBackground } from "../lib/image-cache";
 
 export async function getServerSideProps() {
-  return { props: { background: await getBackground() } };
+  return { props: { background: toPageBackground(await getBackground()) } };
 }
 
 export default function Home({ background }) {

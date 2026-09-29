@@ -20,6 +20,7 @@ export default function Main({ background }) {
         priority
         fill
         sizes="100vw"
+        quality={65}
         loader={useFallback ? undefined : unsplashLoader}
         unoptimized={useFallback}
         onError={() => setFailedImage(imageUrl)}
