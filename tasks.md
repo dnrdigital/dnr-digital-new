@@ -71,4 +71,10 @@
 - [x] Replace the starter Netlify icon with a white D on the existing dark blue brand colour.
 - [x] Supply SVG, 16/32/48px ICO and 180px Apple touch variants; use versioned links globally, including error pages.
 - [x] Verify icon dimensions, rendering, HTTP responses, 28 tests, build and security audit; prepare review PR.
-- [ ] Merge/deploy the favicon change after review.
+- [x] Favicon PR #8 merged as `c3ca583`; production deployment not separately inspected in this follow-up.
+
+## Text entrance and contact interaction — 29 September 2026
+- [x] Add a subtle staggered heading, subtitle and link entrance on page load only.
+- [x] Add a gentle lift and drawn underline for contact hover and keyboard focus, with reduced-motion support.
+- [x] Verify browser animation events, no replay on dice changes, keyboard focus, reduced-motion CSS and mobile layout; 28 tests, build and audit pass.
+- [ ] Merge/deploy the text-motion PR after review.
