@@ -30,3 +30,26 @@ test("malformed cookies are ignored and output is private, bounded and host-only
   assert.ok(!cookie.includes("Domain="));
 });
 test("empty pool returns no photo", () => assert.equal(choosePhoto([]).photo, null));
+
+test("orientation changes preserve separate repeat history and reset only the exhausted orientation", () => {
+  const pool = [
+    { id: "wide-a", width: 2400, height: 1600 }, { id: "wide-b", width: 2400, height: 1600 },
+    { id: "tall-a", width: 1600, height: 2400 }, { id: "tall-b", width: 1600, height: 2400 },
+  ];
+  const first = choosePhoto(pool, [], "", () => 0, "landscape");
+  assert.equal(first.photo.id, "wide-a");
+  const portrait = choosePhoto(pool, first.history, first.photo.id, () => 0, "portrait");
+  assert.equal(portrait.photo.id, "tall-a");
+  const next = choosePhoto(pool, portrait.history, portrait.photo.id, () => 0, "landscape");
+  assert.equal(next.photo.id, "wide-b");
+  const reset = choosePhoto(pool, next.history, next.photo.id, () => 0, "landscape");
+  assert.equal(reset.photo.id, "wide-a");
+  assert.ok(reset.history.includes("tall-a"));
+  assert.equal(choosePhoto(pool, reset.history, reset.photo.id, () => 0, "portrait").photo.id, "tall-b");
+});
+
+test("missing orientation falls back to usable photos without repeating the current photo", () => {
+  const pool = [{ id: "wide", width: 2400, height: 1600 }];
+  assert.equal(choosePhoto(pool, [], "", () => 0, "portrait").photo.id, "wide");
+  assert.equal(choosePhoto(pool, [], "wide", () => 0, "portrait").photo, null);
+});

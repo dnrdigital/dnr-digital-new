@@ -2,10 +2,10 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { createPoolReader, refreshPool, usableImages, poolKey, HOUR } = require("../lib/image-cache");
 const { toPageBackground } = require("../lib/photo-props");
-const photo = (id) => ({ id, width: 2400, height: 1600, urls: { full: `https://images.unsplash.com/${id}?ixid=track` },
+const photo = (id, orientation = "landscape") => ({ id, width: orientation === "landscape" ? 2400 : 1600, height: orientation === "landscape" ? 1600 : 2400, urls: { full: `https://images.unsplash.com/${id}?ixid=track` },
   user: { name: "Photographer", username: "photographer" },
   links: { download_location: `https://api.unsplash.com/photos/${id}/download?ixid=track` } });
-const ok = (images) => ({ ok: true, headers: new Headers({ "x-ratelimit-remaining": "49" }), json: async () => ({ results: images, total_pages: 10 }) });
+const ok = (images) => ({ ok: true, headers: new Headers({ "x-ratelimit-remaining": "49" }), json: async () => images });
 function memoryStore(initial) {
   let data = initial ? structuredClone(initial) : null;
   let revision = data ? 1 : 0;
@@ -46,44 +46,45 @@ test("missing store uses bundled photos; a custom collection never falls back to
   assert.deepEqual(await createPoolReader({ store, collection: () => "custom" })(), []);
 });
 
-test("overlapping refreshes reserve one request per clock hour and retain tracking metadata", async () => {
+test("overlapping refreshes reserve one batch sequence per clock hour and retain tracking metadata", async () => {
   const store = memoryStore();
   let calls = 0;
   const options = { store, key: "test", collection: "curated", now: () => 1000,
     fetchImages: async (url, init) => {
       calls++;
       assert.equal(url.searchParams.get("collections"), "curated");
-      assert.equal(url.searchParams.get("orientation"), "landscape");
+      assert.ok(["landscape", "portrait"].includes(url.searchParams.get("orientation")));
       assert.equal(url.searchParams.get("content_filter"), "high");
       assert.equal(url.searchParams.get("count"), "30");
       assert.equal(init.headers.Authorization, "Client-ID test");
-      return { ...ok([]), json: async () => [photo("new")] };
+      return ok([photo(`new-${url.searchParams.get("orientation")}`, url.searchParams.get("orientation"))]);
     } };
   await Promise.all(Array.from({ length: 10 }, () => refreshPool(options)));
-  assert.equal(calls, 1);
-  assert.equal((await store.get()).images[0].links.download_location, photo("new").links.download_location);
+  assert.equal(calls, 2);
+  assert.equal((await store.get()).images[0].links.download_location, photo("new-landscape").links.download_location);
   assert.equal((await refreshPool(options)).status, "backoff");
   await refreshPool({ ...options, now: () => HOUR + 1000 });
-  assert.equal(calls, 2);
+  assert.equal(calls, 4);
 });
 
-test("hourly cron jitter does not prevent all three themes entering the pool", async () => {
+test("cron jitter refreshes all four batches each hour, capped at 80 photos", async () => {
   const store = memoryStore();
-  const queried = [];
+  let calls = 0;
   for (const time of [13 * HOUR + 39 * 60_000, 14 * HOUR + 57_000, 15 * HOUR + 54_000]) {
     const result = await refreshPool({ store, key: "test", now: () => time,
       fetchImages: async (url) => {
-        const query = url.searchParams.get("query");
-        queried.push(query);
-        return ok([photo(query)]);
+        calls++;
+        const orientation = url.searchParams.get("orientation");
+        return ok(Array.from({ length: 30 }, (_, i) => photo(`${url.searchParams.get("collections")}-${orientation}-${i}`, orientation)));
       } });
     assert.equal(result.status, "fresh");
+    assert.equal(result.photos, 80);
+    assert.equal(Object.keys(result.batches).length, 4);
     assert.equal(result.nextAttempt, (Math.floor(time / HOUR) + 1) * HOUR);
     assert.equal((await refreshPool({ store, key: "test", now: () => time + 1,
       fetchImages: () => assert.fail("same-hour retry must not request") })).status, "backoff");
   }
-  assert.deepEqual(queried, ["brutalist architecture", "volcanic landscape", "aerial farmland"]);
-  assert.equal((await store.get()).images.length, 3);
+  assert.equal(calls, 12);
 });
 
 test("a failed refresh waits a full hour even just before the next clock hour", async () => {
@@ -91,7 +92,7 @@ test("a failed refresh waits a full hour even just before the next clock hour", 
   const time = HOUR - 1000;
   const result = await refreshPool({ store, key: "test", now: () => time,
     fetchImages: async () => { throw new Error("offline"); } });
-  assert.equal(result.failure, "request-failed");
+  assert.ok(Object.values(result.batches).every((batch) => batch.failure === "request-failed"));
   assert.equal(result.nextAttempt, time + HOUR);
   assert.equal((await refreshPool({ store, key: "test", now: () => HOUR,
     fetchImages: () => assert.fail("failure cooldown must survive hour boundary") })).status, "backoff");
@@ -116,7 +117,7 @@ for (const [name, failure] of [
     if (name === "quota exhausted") assert.equal(state.nextAttempt, 2 * HOUR);
     assert.equal((await refreshPool({ store, key: "test", now: () => 1, fetchImages })).status, "backoff");
     await refreshPool({ store, key: "test", now: () => state.nextAttempt, fetchImages });
-    assert.equal(calls, 2);
+    assert.equal(calls, name === "quota exhausted" ? 2 : 8);
     assert.ok((await store.get()).nextAttempt >= state.nextAttempt + 2 * HOUR);
   });
 }
@@ -194,20 +195,33 @@ test("scheduled events without HTTP deploy metadata refresh; preview and invalid
   }
 });
 
-test("search refresh keeps a balanced bounded pool and advances past an unsuitable result", async () => {
+test("partial failure retains that batch while refreshing the other orientations and collection", async () => {
   const store = memoryStore();
-  for (let i = 0; i < 6; i++) {
-    const result = await refreshPool({ store, key: "test", now: () => i * HOUR,
-      fetchImages: async () => ok(Array.from({ length: 30 }, (_, j) => photo(`${i}-${j}`))) });
-    assert.equal(result.status, "fresh");
-  }
-  const snapshot = await store.get();
-  assert.equal(snapshot.images.length, 90);
-  assert.equal(snapshot.cursor, 6);
-  assert.equal(snapshot.images.some((p) => p.id.startsWith("0-")), false);
-  const result = await refreshPool({ store, key: "test", now: () => 6 * HOUR,
-    fetchImages: async () => ok([{ ...photo("tiny"), width: 400 }]) });
-  assert.equal(result.status, "stale");
-  assert.equal((await store.get()).cursor, 7);
-  assert.deepEqual((await store.get()).images, snapshot.images);
+  let round = 0;
+  const fetchImages = async (url) => {
+    const orientation = url.searchParams.get("orientation");
+    const id = `${url.searchParams.get("collections")}-${orientation}`;
+    if (round && id === "11978287-portrait") throw new Error("offline");
+    return ok([photo(`${id}-${round}`, orientation)]);
+  };
+  await refreshPool({ store, key: "test", now: () => 0, fetchImages });
+  round++;
+  const result = await refreshPool({ store, key: "test", now: () => HOUR, fetchImages });
+  assert.equal(result.status, "partial");
+  assert.equal(result.photos, 4);
+  assert.equal((await store.get()).batches["11978287:portrait"].images[0].id, "11978287-portrait-0");
+  assert.equal((await store.get()).batches["1101855:portrait"].images[0].id, "1101855-portrait-1");
+});
+
+test("a successful response with zero quota stops subsequent requests", async () => {
+  const store = memoryStore();
+  let calls = 0;
+  const result = await refreshPool({ store, key: "test", now: () => 1000, fetchImages: async () => {
+    calls++;
+    return { ...ok([photo("last")]), headers: new Headers({ "x-ratelimit-remaining": "0" }) };
+  } });
+  assert.equal(calls, 1);
+  assert.equal(result.status, "partial");
+  assert.equal(result.photos, 1);
+  assert.equal(result.nextAttempt, HOUR + 1000);
 });

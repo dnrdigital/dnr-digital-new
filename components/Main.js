@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import loadBackground from "../lib/load-background";
 import unsplashLoader from "../lib/unsplash-loader";
 
-export default function Main({ background: initialBackground }) {
-  const [background, setBackground] = useState(initialBackground);
+export default function Main({ backgrounds }) {
+  const [background, setBackground] = useState(null);
+  const [orientation, setOrientation] = useState(null);
+  const [displayOrientation, setDisplayOrientation] = useState(null);
   const [previous, setPrevious] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -17,10 +19,38 @@ export default function Main({ background: initialBackground }) {
   const imageUrl = background?.urls?.full;
   const useFallback = !imageUrl || failedImage === imageUrl;
   const currentUrl = useFallback ? "/background.jpg" : imageUrl;
+  const currentPhotoUrl = useRef(currentUrl);
+  currentPhotoUrl.current = currentUrl;
   const ready = loadedUrl === currentUrl;
   const visiblePhoto = ready ? (useFallback ? null : background) : previous;
   const creditedPhoto = visiblePhoto || (useFallback ? null : background);
   const photoCredit = creditedPhoto?.user?.username;
+
+  useEffect(() => {
+    const media = window.matchMedia("(orientation: portrait)");
+    const update = () => setOrientation(media.matches ? "portrait" : "landscape");
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!orientation) return;
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+    prepared.current?.controller.abort();
+    prepared.current = null;
+    setBusy(false);
+    setMessage("");
+    if (!displayOrientation) {
+      // Media-qualified head preloads already fetched only the matching photo.
+      setBackground(backgrounds[orientation]);
+      setDisplayOrientation(orientation);
+    } else if (displayOrientation !== orientation) {
+      changeScenery(true, orientation);
+    }
+    // React only to a viewport orientation change, not every photo transition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orientation]);
 
   useEffect(() => () => {
     activeRequest.current?.abort();
@@ -37,13 +67,13 @@ export default function Main({ background: initialBackground }) {
   // our metadata cache; image bytes still come directly from Unsplash's CDN.
   useEffect(() => {
     const connection = navigator.connection;
-    if (!ready || previous || useFallback || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType)) return;
+    if (!ready || previous || useFallback || orientation !== displayOrientation || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType)) return;
     let candidate;
     const timer = setTimeout(() => {
       if (activeRequest.current) return;
       const controller = new AbortController();
-      candidate = { controller, forId: background.id,
-        promise: fetchCandidate(background.id, controller.signal).catch(() => null) };
+      candidate = { controller, forId: background.id, orientation,
+        promise: fetchCandidate(background.id, controller.signal, orientation).catch(() => null) };
       prepared.current = candidate;
     }, 750);
     return () => {
@@ -51,10 +81,10 @@ export default function Main({ background: initialBackground }) {
       candidate?.controller.abort();
       if (prepared.current === candidate) prepared.current = null;
     };
-  }, [background?.id, ready, previous, useFallback]);
+  }, [background?.id, ready, previous, useFallback, orientation, displayOrientation]);
 
-  async function fetchCandidate(exclude, signal) {
-    const response = await fetch(`/api/background?exclude=${encodeURIComponent(exclude || "")}`, {
+  async function fetchCandidate(exclude, signal, targetOrientation) {
+    const response = await fetch(`/api/background?orientation=${targetOrientation}&exclude=${encodeURIComponent(exclude || "")}`, {
       cache: "no-store", signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
     });
     if (!response.ok) throw new Error("Background unavailable");
@@ -63,22 +93,24 @@ export default function Main({ background: initialBackground }) {
     return loadBackground(data, signal);
   }
 
-  async function changeScenery(recovering = false) {
-    if (activeRequest.current || (busy && !recovering)) return;
+  async function changeScenery(recovering = false, targetOrientation = orientation) {
+    if (!targetOrientation || activeRequest.current || (busy && !recovering)) return;
     const controller = new AbortController();
     activeRequest.current = controller;
     setBusy(true);
     setMessage("");
     let transitioning = false;
     const attempted = new Set([background?.id]);
-    const candidate = prepared.current?.forId === background?.id ? prepared.current : null;
+    const candidate = prepared.current?.forId === background?.id && prepared.current?.orientation === targetOrientation ? prepared.current : null;
+    if (!candidate) prepared.current?.controller.abort();
+    controller.signal.addEventListener("abort", () => candidate?.controller.abort(), { once: true });
     prepared.current = null;
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
         if (controller.signal.aborted) return;
         try {
           const data = attempt === 0 && candidate
-            ? await candidate.promise : await fetchCandidate(background?.id, controller.signal);
+            ? await candidate.promise : await fetchCandidate(background?.id, controller.signal, targetOrientation);
           if (!data?.id || attempted.has(data.id)) continue;
           attempted.add(data.id);
           if (controller.signal.aborted) return;
@@ -88,6 +120,7 @@ export default function Main({ background: initialBackground }) {
           setPrevious(old);
           transitioning = Boolean(old);
           setBackground(data);
+          setDisplayOrientation(targetOrientation);
           setFailedImage(null);
           return;
         } catch {
@@ -97,7 +130,7 @@ export default function Main({ background: initialBackground }) {
       setMessage("The scenery is taking a breather. Try again shortly.");
     } finally {
       if (!controller.signal.aborted && !transitioning) setBusy(false);
-      activeRequest.current = null;
+      if (activeRequest.current === controller) activeRequest.current = null;
     }
   }
 
@@ -106,17 +139,22 @@ export default function Main({ background: initialBackground }) {
       className="min-h-dvh flex items-center relative group overflow-hidden"
       style={{ backgroundColor: "#10293a" }}
     >
-      <div className="scenery-placeholder photo" aria-hidden="true" style={{
+      {!displayOrientation && Object.entries(backgrounds).map(([kind, photo]) =>
+        <div key={kind} className={`scenery-placeholder photo initial-${kind}`} aria-hidden="true" style={{
+          backgroundColor: photo?.color || "#10293a",
+          backgroundImage: photo?.placeholder ? `url("${photo.placeholder}")` : undefined,
+        }} />)}
+      {displayOrientation && <div className="scenery-placeholder photo" aria-hidden="true" style={{
         backgroundColor: background?.color || "#10293a",
         backgroundImage: background?.placeholder ? `url("${background.placeholder}")` : undefined,
-      }} />
+      }} />}
       {previous && (
         <div key={previous.urls.full} className="scenery-layer" style={{ backgroundColor: previous.color }}>
           <Image key={previous.urls.full} alt="" src={previous.urls.full} fill sizes="100vw" quality={65}
             loader={unsplashLoader} style={{ objectFit: "cover" }} className="photo opacity-80" />
         </div>
       )}
-      <div key={currentUrl} className={`scenery-layer scenery-current ${ready ? "scenery-ready" : ""}`}
+      {displayOrientation && <div key={currentUrl} className={`scenery-layer scenery-current ${ready ? "scenery-ready" : ""}`}
         style={{ backgroundColor: useFallback ? "#10293a" : background.color }}>
         <Image
           key={currentUrl}
@@ -128,7 +166,9 @@ export default function Main({ background: initialBackground }) {
           quality={65}
           loader={useFallback ? undefined : unsplashLoader}
           unoptimized={useFallback}
-          onLoad={() => requestAnimationFrame(() => requestAnimationFrame(() => setLoadedUrl(currentUrl)))}
+          onLoad={() => requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (currentPhotoUrl.current === currentUrl) setLoadedUrl(currentUrl);
+          }))}
           onError={() => {
             if (useFallback) { setLoadedUrl(currentUrl); return; }
             if (previous) {
@@ -149,8 +189,8 @@ export default function Main({ background: initialBackground }) {
           style={{ objectFit: "cover" }}
           className="photo opacity-80"
         />
-      </div>
-      <noscript><style>{`.scenery-current { opacity: 1; }`}</style></noscript>
+      </div>}
+      <noscript><style>{`.scenery-placeholder { background-image: url('/background.jpg') !important; } .scenery-control { display: none; }`}</style></noscript>
       {photoCredit && (
         <div className="absolute top-2 right-2 z-10 font-sans text-white text-xs">
           Photo by{" "}

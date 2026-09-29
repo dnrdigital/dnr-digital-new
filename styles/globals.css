@@ -158,6 +158,11 @@ a:focus-visible {
 .die-tumbling { animation: tumble .65s ease-in-out infinite; }
 .scenery-layer, .scenery-placeholder { position: absolute; inset: 0; }
 .scenery-placeholder { background-size: cover; background-position: center; }
+.initial-portrait { display: none; }
+@media (orientation: portrait) {
+  .initial-landscape { display: none; }
+  .initial-portrait { display: block; }
+}
 .scenery-current { opacity: 0; transition: opacity .7s ease-in-out; }
 .scenery-ready { opacity: 1; }
 @keyframes tumble { to { transform: rotate(360deg); } }
