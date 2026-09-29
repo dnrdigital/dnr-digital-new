@@ -65,4 +65,10 @@
 - [x] Inspect production refresh logs: first themed run at 13:39 BST saved 29 Quiet monumental photos; remaining themes await eligible hourly runs.
 - [x] Replace rectangular box shadows with letter-shaped text shadows on the heading, services and contact link.
 - [x] Verify desktop/mobile letter shadows, 28 tests, production build and clean audit; prepare fix PR.
-- [ ] Merge/deploy the shadow fix after review.
+- [x] Shadow fix PR #7 merged as `7d8f423`; production deployment not separately inspected in the favicon follow-up.
+
+## DNR favicon — 29 September 2026
+- [x] Replace the starter Netlify icon with a white D on the existing dark blue brand colour.
+- [x] Supply SVG, 16/32/48px ICO and 180px Apple touch variants; use versioned links globally, including error pages.
+- [x] Verify icon dimensions, rendering, HTTP responses, 28 tests, build and security audit; prepare review PR.
+- [ ] Merge/deploy the favicon change after review.
