@@ -1,10 +1,11 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { createPoolReader, refreshPool, toPageBackground, usableImages, poolKey, HOUR } = require("../lib/image-cache");
-const photo = (id) => ({ id, urls: { full: `https://images.unsplash.com/${id}?ixid=track` },
+const { createPoolReader, refreshPool, usableImages, poolKey, HOUR } = require("../lib/image-cache");
+const { toPageBackground } = require("../lib/photo-props");
+const photo = (id) => ({ id, width: 2400, height: 1600, urls: { full: `https://images.unsplash.com/${id}?ixid=track` },
   user: { name: "Photographer", username: "photographer" },
   links: { download_location: `https://api.unsplash.com/photos/${id}/download?ixid=track` } });
-const ok = (images) => ({ ok: true, headers: new Headers({ "x-ratelimit-remaining": "49" }), json: async () => images });
+const ok = (images) => ({ ok: true, headers: new Headers({ "x-ratelimit-remaining": "49" }), json: async () => ({ results: images, total_pages: 10 }) });
 function memoryStore(initial) {
   let data = initial ? structuredClone(initial) : null;
   let revision = data ? 1 : 0;
@@ -56,7 +57,7 @@ test("overlapping refreshes reserve one request, retain tracking metadata, and l
       assert.equal(url.searchParams.get("content_filter"), "high");
       assert.equal(url.searchParams.get("count"), "30");
       assert.equal(init.headers.Authorization, "Client-ID test");
-      return ok([photo("new")]);
+      return { ...ok([]), json: async () => [photo("new")] };
     } };
   await Promise.all(Array.from({ length: 10 }, () => refreshPool(options)));
   assert.equal(calls, 1);
@@ -131,4 +132,22 @@ test("preview and unpublished scheduled functions cannot write the production po
   for (const deploy of [{ context: "deploy-preview", published: false }, { context: "production", published: false }]) {
     assert.equal((await handler(null, { deploy })).status, 204);
   }
+});
+
+test("search refresh keeps a balanced bounded pool and advances past an unsuitable result", async () => {
+  const store = memoryStore();
+  for (let i = 0; i < 6; i++) {
+    const result = await refreshPool({ store, key: "test", now: () => i * HOUR,
+      fetchImages: async () => ok(Array.from({ length: 30 }, (_, j) => photo(`${i}-${j}`))) });
+    assert.equal(result.status, "fresh");
+  }
+  const snapshot = await store.get();
+  assert.equal(snapshot.images.length, 90);
+  assert.equal(snapshot.cursor, 6);
+  assert.equal(snapshot.images.some((p) => p.id.startsWith("0-")), false);
+  const result = await refreshPool({ store, key: "test", now: () => 6 * HOUR,
+    fetchImages: async () => ok([{ ...photo("tiny"), width: 400 }]) });
+  assert.equal(result.status, "stale");
+  assert.equal((await store.get()).cursor, 7);
+  assert.deepEqual((await store.get()).images, snapshot.images);
 });

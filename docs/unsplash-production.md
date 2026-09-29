@@ -8,13 +8,13 @@ Name: **DNR Digital — Change of scenery**
 
 Description:
 
-> DNR Digital is a digital consultancy website. It displays landscape photography from a curated Unsplash collection behind its services and contact details. Visitors see different photographs on return visits and can explore another photograph using “Change of scenery”. Images are hotlinked directly from Unsplash with photographer and Unsplash attribution. A shared metadata cache keeps the experience available during API outages and limits discovery requests.
+> DNR Digital is a digital consultancy website. It displays landscape photography selected through themed Unsplash searches behind its services and contact details. Visitors see different photographs on return visits and can explore another photograph using “Change of scenery”. Images are hotlinked directly from Unsplash with photographer and Unsplash attribution. A shared metadata cache keeps the experience available during API outages and limits discovery requests.
 
 Website: https://dnr.digital/
 
 ## Checklist
 
-- Hotlinking: images use the original API-returned `urls.full`, with responsive width, quality and format parameters. Preserve `ixid`; do not proxy/store the image binaries. The local fallback is separate from the Unsplash collection.
+- Hotlinking: images use the original API-returned `urls.full`, with responsive width, quality and format parameters. Preserve `ixid`; do not proxy/store the image binaries. The local fallback is separate from the Unsplash photo pool.
 - Attribution: show the photographer's full name and link to their profile plus an Unsplash link, both with `utm_source=dnr_digital&utm_medium=referral`. Reject new photos without attribution. Change attribution when the replacement image becomes visible.
 - Branding: DNR.DIGITAL has its own name and design and uses no Unsplash logo.
 - Credentials: all API requests are server-side; keep the access key in Netlify environment variables with Functions scope. Never expose it through browser props or URL parameters.
@@ -31,11 +31,13 @@ Suggested question for Unsplash support (not sent):
 
 The implementation retains complete `links.download_location` values, including query parameters, in the server-side pool. It does **not** currently emit download events or invent them during refreshes. If Unsplash requires events for this interaction, implement the exact authenticated returned URL for that action, with server-side allowlisting, bounded delivery/retry and request budgeting before submitting for production access. Do not claim that caching eliminates required tracking requests or assume that they are exempt from quota. This remains an application-readiness item, not a completed checklist item.
 
-## Collection criteria
+## Selection criteria
 
-Start with the existing public collection `bo8jQKTaE0Y`, configurable via `UNSPLASH_COLLECTION_ID`. Editing that collection in Unsplash controls the choices without changing the site. This change does not add/remove photos in the user's collection.
+Approved directions: Quiet monumental (brutalist/concrete/monumental architecture), Otherworldly Earth (volcanic landscapes, dunes, glaciers) and Hidden patterns (aerial farmland, architectural repetition, terraces). One hourly search rotates the phrases and pages, maintains a last-good batch per theme, and deduplicates the combined pool. Landscape/high-content-filter requests plus minimum dimensions and aspect-ratio checks exclude unsuitable sizes; they cannot guarantee artistic relevance or composition. Review both wide desktop and narrow mobile crops after production fills the pool.
 
-Prefer strong colour, architecture, geometry, landscapes and abstract details. Check both a wide desktop crop and a narrow mobile crop; avoid busy subjects behind the central lettering and photos whose principal subject disappears on mobile. The refresh asks for landscape orientation and high content filtering, but those are not a substitute for curation. Time-of-day selection is deferred.
+Leave collection/topic environment overrides blank to use searches. The previous default `bo8jQKTaE0Y` is a **Wallpapers topic**, not a collection owned by the user; earlier documentation was incorrect. That legacy setting now selects the approved themes. A genuine collection ID still permits manual curation; an explicit `UNSPLASH_TOPIC_ID=wallpapers` selects the Wallpapers topic correctly. No external collections are created or edited.
+
+Inline previews are derived from the supplied BlurHash; final images and the single prepared next image remain hotlinked. Preparing an image does not claim a download/use event. The unresolved tracking question above still applies. Time-of-day selection remains deferred.
 
 ## Sources checked 29 September 2026
 
@@ -43,3 +45,5 @@ Prefer strong colour, architecture, geometry, landscapes and abstract details. C
 - https://unsplash.com/documentation#get-a-random-photo
 - https://help.unsplash.com/en/articles/2511245-unsplash-api-guidelines
 - https://help.unsplash.com/en/articles/2511258-guideline-triggering-a-download
+- https://unsplash.com/documentation#search-photos
+- https://unsplash.com/documentation#blurhash-placeholders

@@ -6,7 +6,8 @@ import { pathToFileURL } from "node:url";
 
 assert.ok(process.argv[2], "Pass the packaged refresh-photos.mjs path");
 process.env.UNSPLASH_ACCESS_KEY = "smoke-test-key";
-process.env.UNSPLASH_COLLECTION_ID = "smoke-test-collection";
+delete process.env.UNSPLASH_COLLECTION_ID;
+delete process.env.UNSPLASH_TOPIC_ID;
 process.env.NETLIFY_BLOBS_CONTEXT = Buffer.from(JSON.stringify({
   siteID: "smoke-test-site", token: "smoke-test-token",
   edgeURL: "https://blobs.invalid", uncachedEdgeURL: "https://blobs.invalid",
@@ -15,18 +16,19 @@ let saved = null;
 let revision = 0;
 let discoveries = 0;
 let writes = 0;
-const photo = { id: "smoke-photo", urls: { full: "https://images.unsplash.com/smoke-photo?ixid=test" },
+const photo = { id: "smoke-photo", width: 2400, height: 1600, urls: { full: "https://images.unsplash.com/smoke-photo?ixid=test" },
   user: { name: "Smoke Photographer", username: "smoke-photographer" } };
 globalThis.fetch = async (input, options = {}) => {
   const url = new URL(input);
   if (url.hostname === "api.unsplash.com") {
     discoveries++;
     assert.equal(options.headers.Authorization, "Client-ID smoke-test-key");
-    assert.equal(url.searchParams.get("collections"), "smoke-test-collection");
-    return Response.json([photo], { headers: { "x-ratelimit-remaining": "49" } });
+    assert.equal(url.pathname, "/search/photos");
+    assert.equal(url.searchParams.get("query"), "brutalist architecture");
+    return Response.json({ results: [photo], total_pages: 5 }, { headers: { "x-ratelimit-remaining": "49" } });
   }
   assert.equal(url.hostname, "blobs.invalid", "Unexpected HTTP target; real network is never used");
-  assert.ok(url.pathname.includes("unsplash-photos/pool-smoke-test-collection"));
+  assert.ok(url.pathname.includes("unsplash-photos/pool-themes-v1"));
   const method = (options.method || "GET").toUpperCase();
   if (method === "GET") {
     return saved ? Response.json(saved, { headers: { etag: String(revision) } }) : new Response(null, { status: 404 });

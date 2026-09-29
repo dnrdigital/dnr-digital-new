@@ -9,36 +9,84 @@ export default function Main({ background: initialBackground }) {
   const [previous, setPrevious] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [loadedUrl, setLoadedUrl] = useState(null);
+  const [failedImage, setFailedImage] = useState(null);
   const activeRequest = useRef(null);
+  const prepared = useRef(null);
   const recovered = useRef(false);
-  useEffect(() => () => activeRequest.current?.abort(), []);
+  const imageUrl = background?.urls?.full;
+  const useFallback = !imageUrl || failedImage === imageUrl;
+  const currentUrl = useFallback ? "/background.jpg" : imageUrl;
+  const ready = loadedUrl === currentUrl;
+  const visiblePhoto = ready ? (useFallback ? null : background) : previous;
+  const creditedPhoto = visiblePhoto || (useFallback ? null : background);
+  const photoCredit = creditedPhoto?.user?.username;
+
+  useEffect(() => () => {
+    activeRequest.current?.abort();
+    prepared.current?.controller.abort();
+  }, []);
   useEffect(() => {
-    if (!previous) return;
-    const timer = setTimeout(() => setPrevious(null), 600);
+    if (!ready || !previous) return;
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700;
+    const timer = setTimeout(() => { setPrevious(null); setBusy(false); }, duration);
     return () => clearTimeout(timer);
-  }, [previous]);
+  }, [ready, previous]);
+
+  // Prepare just one next photo after the visible image has settled. This reads
+  // our metadata cache; image bytes still come directly from Unsplash's CDN.
+  useEffect(() => {
+    const connection = navigator.connection;
+    if (!ready || previous || useFallback || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType)) return;
+    let candidate;
+    const timer = setTimeout(() => {
+      if (activeRequest.current) return;
+      const controller = new AbortController();
+      candidate = { controller, forId: background.id,
+        promise: fetchCandidate(background.id, controller.signal).catch(() => null) };
+      prepared.current = candidate;
+    }, 750);
+    return () => {
+      clearTimeout(timer);
+      candidate?.controller.abort();
+      if (prepared.current === candidate) prepared.current = null;
+    };
+  }, [background?.id, ready, previous, useFallback]);
+
+  async function fetchCandidate(exclude, signal) {
+    const response = await fetch(`/api/background?exclude=${encodeURIComponent(exclude || "")}`, {
+      cache: "no-store", signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+    });
+    if (!response.ok) throw new Error("Background unavailable");
+    const { data } = await response.json();
+    if (!data?.id || data.id === exclude) throw new Error("No alternative photo");
+    return loadBackground(data, signal);
+  }
 
   async function changeScenery(recovering = false) {
-    if (activeRequest.current) return;
+    if (activeRequest.current || (busy && !recovering)) return;
     const controller = new AbortController();
     activeRequest.current = controller;
     setBusy(true);
     setMessage("");
+    let transitioning = false;
     const attempted = new Set([background?.id]);
+    const candidate = prepared.current?.forId === background?.id ? prepared.current : null;
+    prepared.current = null;
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
         if (controller.signal.aborted) return;
         try {
-          const response = await fetch(`/api/background?exclude=${encodeURIComponent(background?.id || "")}`, {
-            cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]),
-          });
-          if (!response.ok) throw new Error("Background unavailable");
-          const { data } = await response.json();
+          const data = attempt === 0 && candidate
+            ? await candidate.promise : await fetchCandidate(background?.id, controller.signal);
           if (!data?.id || attempted.has(data.id)) continue;
           attempted.add(data.id);
-          await loadBackground(data, controller.signal);
           if (controller.signal.aborted) return;
-          setPrevious(recovering || useFallback ? null : background);
+          // Every layer includes its own opaque colour backing. Fading the whole
+          // layer avoids two translucent images brightening/dimming each other.
+          const old = ready && !useFallback ? background : null;
+          setPrevious(old);
+          transitioning = Boolean(old);
           setBackground(data);
           setFailedImage(null);
           return;
@@ -48,45 +96,61 @@ export default function Main({ background: initialBackground }) {
       }
       setMessage("The scenery is taking a breather. Try again shortly.");
     } finally {
-      if (!controller.signal.aborted) setBusy(false);
+      if (!controller.signal.aborted && !transitioning) setBusy(false);
       activeRequest.current = null;
     }
   }
-  const [failedImage, setFailedImage] = useState(null);
-  const imageUrl = background?.urls?.full;
-  const useFallback = !imageUrl || failedImage === imageUrl;
-  const photoCredit = !useFallback && background?.user?.username;
 
   return (
     <main
       className="min-h-dvh flex items-center relative group overflow-hidden"
-      style={{ backgroundColor: useFallback ? "#10293a" : background.color }}
+      style={{ backgroundColor: "#10293a" }}
     >
+      <div className="scenery-placeholder photo" aria-hidden="true" style={{
+        backgroundColor: background?.color || "#10293a",
+        backgroundImage: background?.placeholder ? `url("${background.placeholder}")` : undefined,
+      }} />
       {previous && (
-        <Image alt="" src={previous.urls.full} fill sizes="100vw" quality={65}
-          loader={unsplashLoader} style={{ objectFit: "cover" }} className="photo opacity-80" />
+        <div key={previous.urls.full} className="scenery-layer" style={{ backgroundColor: previous.color }}>
+          <Image key={previous.urls.full} alt="" src={previous.urls.full} fill sizes="100vw" quality={65}
+            loader={unsplashLoader} style={{ objectFit: "cover" }} className="photo opacity-80" />
+        </div>
       )}
-      <Image
-        key={imageUrl || "fallback"}
-        alt=""
-        src={useFallback ? "/background.jpg" : imageUrl}
-        priority
-        fill
-        sizes="100vw"
-        quality={65}
-        loader={useFallback ? undefined : unsplashLoader}
-        unoptimized={useFallback}
-        onError={() => {
-          if (useFallback) return;
-          setFailedImage(imageUrl);
-          if (!recovered.current) {
-            recovered.current = true;
-            changeScenery(true);
-          }
-        }}
-        style={{ objectFit: "cover" }}
-        className={`photo opacity-80 transition duration-500 ${previous ? "photo-arriving" : ""}`}
-      />
+      <div key={currentUrl} className={`scenery-layer scenery-current ${ready ? "scenery-ready" : ""}`}
+        style={{ backgroundColor: useFallback ? "#10293a" : background.color }}>
+        <Image
+          key={currentUrl}
+          alt=""
+          src={currentUrl}
+          priority
+          fill
+          sizes="100vw"
+          quality={65}
+          loader={useFallback ? undefined : unsplashLoader}
+          unoptimized={useFallback}
+          onLoad={() => requestAnimationFrame(() => requestAnimationFrame(() => setLoadedUrl(currentUrl)))}
+          onError={() => {
+            if (useFallback) { setLoadedUrl(currentUrl); return; }
+            if (previous) {
+              setBackground(previous);
+              setLoadedUrl(previous.urls.full);
+              setPrevious(null);
+              setBusy(false);
+              setMessage("The scenery is taking a breather. Try again shortly.");
+              return;
+            }
+            setFailedImage(imageUrl);
+            setBusy(false);
+            if (!recovered.current) {
+              recovered.current = true;
+              changeScenery(true);
+            }
+          }}
+          style={{ objectFit: "cover" }}
+          className="photo opacity-80"
+        />
+      </div>
+      <noscript><style>{`.scenery-current { opacity: 1; }`}</style></noscript>
       {photoCredit && (
         <div className="absolute top-2 right-2 z-10 font-sans text-white text-xs">
           Photo by{" "}
@@ -94,9 +158,9 @@ export default function Main({ background: initialBackground }) {
             className="credit underline"
             target="_blank"
             rel="noopener noreferrer"
-            href={`https://unsplash.com/@${background.user.username}?utm_source=dnr_digital&utm_medium=referral`}
+            href={`https://unsplash.com/@${creditedPhoto.user.username}?utm_source=dnr_digital&utm_medium=referral`}
           >
-            {background.user.name || background.user.username}
+            {creditedPhoto.user.name || creditedPhoto.user.username}
           </a>{" "}
           on{" "}
           <a
@@ -122,8 +186,8 @@ export default function Main({ background: initialBackground }) {
         <span role="status" className="scenery-status">{message}</span>
       </div>
       <div
-        className={`text-center w-4/5 mx-auto z-10 py-16 ${useFallback ? "text-white" : "mix-blend-plus-lighter"}`}
-        style={{ color: useFallback ? undefined : background.color }}
+        className={`text-center w-4/5 mx-auto z-10 py-16 ${!visiblePhoto ? "text-white" : "mix-blend-plus-lighter"}`}
+        style={{ color: visiblePhoto?.color }}
       >
         <h1 className="-my-4 md:-my-8 lg:-my-16 xl:-my-20 font-display font-bold group-hover:text-white group-focus-within:text-white group-hover:opacity-80 group-focus-within:opacity-80 transition duration-1000 shadow-2xl">
           <span className="text-fit">

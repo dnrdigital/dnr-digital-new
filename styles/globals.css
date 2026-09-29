@@ -113,10 +113,14 @@ a:focus-visible {
 }
 .scenery-status:not(:empty) { padding-top: .4rem; }
 .die-tumbling { animation: tumble .65s ease-in-out infinite; }
-.photo-arriving { animation: scenery-arrive .5s ease both; }
+.scenery-layer, .scenery-placeholder { position: absolute; inset: 0; }
+.scenery-placeholder { background-size: cover; background-position: center; }
+.scenery-current { opacity: 0; transition: opacity .7s ease-in-out; }
+.scenery-ready { opacity: 1; }
 @keyframes tumble { to { transform: rotate(360deg); } }
-@keyframes scenery-arrive { from { opacity: 0; } to { opacity: .8; } }
+
 @media (prefers-reduced-motion: reduce) {
-  .die-tumbling, .photo-arriving { animation: none; }
+  .die-tumbling { animation: none; }
+  .scenery-current { transition: none; }
   .scenery-die svg { transition: none; }
 }

@@ -43,10 +43,20 @@
 - [x] Draft accurate application description, curation criteria and unresolved download-event question in `docs/unsplash-production.md`.
 - [ ] Capture final deployed desktop/mobile attribution evidence and submit only after the download-event requirement is resolved.
 - [x] PR #4 merged as `c30316e`; deployed scheduler invocation reported by Duncan.
-- [ ] Verify published scheduler/Blobs persistence after the missing-SDK packaging fix.
+- [x] Production refresh after the missing-SDK fix confirmed working by Duncan on 29 September 2026.
 
 ## Scheduled function runtime fix
 - [x] Reproduce missing `@netlify/blobs` in Netlify's packaged native function.
 - [x] Make the native SDK import explicit and verify the isolated package with mocked HTTP.
 - [x] Run source tests, production build and security audit; document repeatable packaging smoke test.
-- [ ] Merge/deploy fix after approval; verify first live refresh and durable snapshot.
+- [x] Deploy fix and confirm the first live refresh: Duncan confirmed it works on 29 September 2026. Confirmation is user-reported; no separate inspection of the live snapshot was performed in this follow-up.
+
+## Scenery refinements — approved 29 September 2026
+- [x] Agree Quiet monumental, Otherworldly Earth and Hidden patterns; defer time-of-day selection.
+- [x] Add server-rendered BlurHash previews and decoded, complete-layer crossfades.
+- [x] Prepare one next image, respecting reduced-data connections and reduced-motion transitions.
+- [x] Rotate bounded themed searches hourly; retain per-theme last-good batches and correct topic/collection configuration.
+- [x] Complete automated, packaging and desktop/mobile/failure browser verification (28 tests; build, audit and isolated packaged search refresh pass).
+- [x] Prepare the refinement changes and deployment instructions for PR review.
+- [ ] Review and merge/deploy the refinement PR after approval.
+- [ ] Verify live themed pool after three successful production refreshes and review photo relevance/crops.
