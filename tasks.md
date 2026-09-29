@@ -28,4 +28,17 @@
 - [x] Compare image qualities across representative photos and use quality 65.
 - [x] Trim homepage photo props while retaining the full image API response.
 - [x] Run tests, production build and audit; verify desktop/mobile rendering and payload savings (15 tests pass; zero audit findings).
-- [ ] Review and approve the performance PR, then merge/deploy and verify production.
+- [x] Review and merge performance PR #3: confirmed by Duncan and GitHub on 29 September 2026 (merge `5e1ce51`).
+- [x] Verify performance release in production: homepage 200, quality 65, slim props and direct font stylesheet confirmed on 29 September 2026.
+
+## Image rotation and Unsplash production access — approved 29 September 2026
+- [x] Review current cache, selection filters and official Unsplash guidelines.
+- [x] Agree shared metadata cache, refresh budget and per-browser non-repeating rotation.
+- [x] Agree curated collection criteria and playful shuffle interaction; consider time-of-day pools separately.
+- [ ] Resolve download-event semantics for this background/shuffle use case and budget required tracking requests.
+- [x] Implement durable last-good metadata, bounded refresh/retry behaviour and image-load fallback with an hourly production scheduler.
+- [x] Implement approved rotation/control with keyboard and reduced-motion support.
+- [x] Test API failures, exhausted quota, concurrent/cold instances, repeat avoidance and attribution during transitions. Browser outage simulation retains the displayed image; see UAT log.
+- [x] Draft accurate application description, curation criteria and unresolved download-event question in `docs/unsplash-production.md`.
+- [ ] Capture final deployed desktop/mobile attribution evidence and submit only after the download-event requirement is resolved.
+- [ ] Review preview PR; merge/deploy after approval and verify published scheduler/Blobs persistence.

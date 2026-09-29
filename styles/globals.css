@@ -80,3 +80,43 @@ a:focus-visible {
     transition: none;
   }
 }
+
+.scenery-control {
+  position: absolute;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 20;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+.scenery-die {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .5rem .8rem;
+  min-height: 48px;
+  border-radius: 999px;
+  background: rgb(16 41 58 / 85%);
+  font-size: .75rem;
+  cursor: pointer;
+}
+.scenery-die svg { transition: transform .25s ease; }
+.scenery-die:hover svg { transform: rotate(-12deg); }
+.scenery-die:focus-visible { outline: 2px solid white; outline-offset: 4px; }
+.scenery-die[aria-disabled="true"] { cursor: wait; }
+.scenery-status {
+  display: block;
+  max-width: 17rem;
+  font-size: .75rem;
+  text-shadow: 0 1px 3px black;
+  text-align: right;
+}
+.scenery-status:not(:empty) { padding-top: .4rem; }
+.die-tumbling { animation: tumble .65s ease-in-out infinite; }
+.photo-arriving { animation: scenery-arrive .5s ease both; }
+@keyframes tumble { to { transform: rotate(360deg); } }
+@keyframes scenery-arrive { from { opacity: 0; } to { opacity: .8; } }
+@media (prefers-reduced-motion: reduce) {
+  .die-tumbling, .photo-arriving { animation: none; }
+  .scenery-die svg { transition: none; }
+}

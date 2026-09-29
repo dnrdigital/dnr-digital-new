@@ -13,20 +13,31 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. An Unsplash key is optional: without one, the site rotates through the 30 photos in `data/imageCache.json`. Add `UNSPLASH_ACCESS_KEY` to `.env.local` to refresh from Unsplash, and optionally change `UNSPLASH_COLLECTION_ID`. Never commit credentials.
+Open http://localhost:3000. An Unsplash key is optional: without one, the site rotates through the 30 photos in `data/imageCache.json`. Plain Next.js development uses the bundled snapshot and never contacts the Unsplash API. The published Netlify scheduled function uses `UNSPLASH_ACCESS_KEY` and optional `UNSPLASH_COLLECTION_ID`. Never commit credentials.
 
 The old key was committed to repository history. Rotate it in Unsplash before deploying this refresh and set the replacement in Netlify's environment variables. Removing it from the current code does not invalidate it.
 
 ## Image behaviour
 
-- The homepage and `GET /api/imageCache` share `lib/image-cache.js`; local development and previews no longer call the production domain.
-- A valid key enables a batch of 30 landscape photos from the configured collection. Refreshes are awaited, limited to one attempt per five minutes per instance, and concurrent requests share the same attempt.
-- Refreshes time out after 2.5 seconds and retain the last good photos on errors, invalid responses or rate limits. The bundled JSON is a read-only starting snapshot; nothing writes to the deployed filesystem.
-- Caches are per serverless instance, not a global rate limiter. Cold starts can each make a request. If traffic grows, revisit shared caching or scheduled refreshes against the actual Unsplash quota.
-- If a remote image fails, the existing local `public/background.jpg` is shown with white text. The consultancy content and contact link remain usable even if both images fail.
-- Responsive images load directly from Unsplash’s image CDN at quality 65 with its tracking parameters preserved, avoiding a second optimization proxy. Photographers and Unsplash are credited. Adobe Fonts remains an external dependency, with CSS font fallbacks. Its stylesheet is linked directly in the document head, with connection hints for the font and image hosts. Font-display is controlled by the Adobe web project.
+- The homepage and image APIs only read cached metadata. Visitor traffic, cold starts and the die never trigger Unsplash discovery requests.
+- `netlify/functions/refresh-photos.mjs` refreshes up to 30 landscape photos from the curated collection once per hour, with high content filtering. Only the currently published production deploy may write. Preview/local scheduler invocations safely skip, and previews may read the shared pool.
+- Netlify Blobs stores the last good full photo response and next-attempt time in the site-wide `unsplash-photos` store, surviving deploys and instance restarts. An atomic conditional reservation prevents overlapping refreshes. The normal discovery budget is one request per hour; required download events would be additional, see `docs/unsplash-production.md`.
+- Failed refreshes retain the pool and back off for 1, 2, 4, then 8 hours, respecting longer `Retry-After` values. Rate-limit remaining is saved for diagnostics. Storage reservation failure makes no API request; missing credentials do not refresh. Unsplash requests time out after five seconds, storage requests after two seconds.
+- Readers retain a last-good in-memory pool for storage failures and recheck storage once per minute per instance. Cold readers can use the bundled 30-photo snapshot for the default collection. A different collection never falls back to unrelated seed photos; it uses the local background until the first successful refresh.
+- An HttpOnly, SameSite, host-only cookie (`dnr_photos`, 30-day lifetime) records up to 90 attempted photo IDs, not a visitor identifier. Photos are selected randomly without repetition until the current pool is exhausted; cycle boundaries avoid an immediate repeat when at least two photos exist. Failed candidates are skipped too. Clearing/blocking cookies removes cross-reload history. Concurrent tabs can race on the cookie; this is best-effort browser history, not cross-device tracking.
+- “Change of scenery” preloads a responsive candidate, retains the current image during loading, and transitions only after success. It tries at most three candidates; API/image timeouts are bounded and failure keeps the current scenery with retry feedback. A failed initial image tries alternatives, with the existing local background and white text as fallback.
+- The die supports keyboard input, keeps focus while loading and respects reduced motion. Photographer attribution changes with the image. The layout, colour treatment and contact link remain intact.
+- Responsive images load directly from Unsplash’s CDN at quality 65 with tracking parameters preserved. Adobe Fonts remains a direct head stylesheet with connection hints and CSS fallbacks; font-display is controlled by the Adobe web project.
 
-The homepage serializes only image URL, colour and photographer attribution into its page props. The image API retains its full photo response. Page rendering and photo rotation are unchanged; no page caching has been added.
+The homepage and `GET /api/background` serialize only photo ID, URL, colour and attribution. `GET /api/imageCache` retains the existing full response. Personalized responses are not cached. Download events are not yet emitted: the production-access interpretation is explicitly pending in `docs/unsplash-production.md`.
+
+### Netlify cache rollout
+
+1. Keep `UNSPLASH_ACCESS_KEY` available to **Functions** in the production deploy context. `UNSPLASH_COLLECTION_ID` is optional; default `bo8jQKTaE0Y`.
+2. After an approved merge/deploy, open Netlify **Functions → refresh-photos** and check its Scheduled badge. It runs hourly on the hour (UTC). Use **Run now** on the published production deploy for the first refresh; no redeploy is needed for future refreshes.
+3. In the function log, expect `status: fresh` and a nonzero photo count. In **Blobs → unsplash-photos**, the `pool-<collection-id>` entry contains images, `updatedAt`, `nextAttempt` and quota remaining. Never edit the cache by hand to bypass its cooldown.
+4. A preview's manual scheduler run intentionally does not write production data or spend API quota. Until the first production refresh, the default collection uses the seed snapshot. Production persistence and scheduler execution therefore require a post-merge check.
+5. Reload several times and use the die; photos and credits should change without new refresh log entries. No Netlify personal token is needed in site configuration: Blobs uses the function's runtime credentials.
 
 ## Verification
 
@@ -37,7 +48,7 @@ npm audit
 npm start
 ```
 
-Tests cover photo rotation, missing credentials, concurrent refreshes, refresh timing, upstream errors, invalid data and fallback behaviour. Browser checks are recorded in `tests/uat-log.md`. Work is tracked in the project-root `tasks.md`.
+Tests cover shared reads, atomic refresh reservations, missing credentials, request budgets, failure backoff, last-good snapshots, attribution validation and non-repeating cookie rotation. Browser checks are recorded in `tests/uat-log.md`. Work is tracked in the project-root `tasks.md`.
 
 ## Dependencies
 

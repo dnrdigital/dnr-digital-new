@@ -1,9 +1,14 @@
 import Head from "next/head";
 import Main from "@components/Main";
-import { getBackground, toPageBackground } from "../lib/image-cache";
+import { getPool, toPageBackground } from "../lib/image-cache";
 
-export async function getServerSideProps() {
-  return { props: { background: toPageBackground(await getBackground()) } };
+import { readHistory, choosePhoto, historyCookie } from "../lib/photo-rotation";
+
+export async function getServerSideProps({ req, res }) {
+  const { photo, history } = choosePhoto(await getPool(), readHistory(req.headers.cookie));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Set-Cookie", historyCookie(history));
+  return { props: { background: toPageBackground(photo) } };
 }
 
 export default function Home({ background }) {
