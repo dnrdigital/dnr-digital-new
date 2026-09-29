@@ -111,3 +111,11 @@ Quality 65 showed no obvious visual regression in the side-by-side review; resul
 - The saved nextAttempt is 14:39:27 BST. With the hourly schedule, the 14:00 invocation should observe cooldown; the next two successful refreshes at 15:00 and 16:00 should add Otherworldly Earth and Hidden patterns. These future outcomes remain unverified. No manual invocation, cache mutation or schedule change was made during this investigation.
 - Replaced Tailwind shadow-2xl (rectangular box-shadow) with a subtle text-shadow on the heading, service line and contact link. Desktop visual review confirms shadows follow letter shapes. At 390 × 844, all three blocks compute box-shadow:none and text-shadow:rgba(0,0,0,0.3) 0px 2px 8px; document width remains 390px and the photo loads.
 - All 28 tests and the production build pass; npm audit reports zero vulnerabilities. No new tests added for this CSS-only change.
+
+## 29 September 2026 — DNR favicon
+
+- Added a self-contained vector D monogram in white on #10293a; replaced favicon.ico with 16, 32 and 48px PNG-backed ICO entries and added a 180px Apple touch icon. No font or external image requests are required by the icon.
+- Icon links now live in the global document head with versioned URLs; removed the old homepage-only declaration. Homepage and 404 HTML each include the expected SVG, ICO and Apple touch URLs without duplicate old declarations.
+- Visually inspected the generated D icon. Decoded every ICO entry and verified its actual dimensions; Apple touch PNG is 180 × 180. All three versioned asset URLs returned HTTP 200 with appropriate image MIME types from the local production server.
+- Browser page renders normally and exposes the icon declarations. The automation extension badges favicons on controlled tabs, so raw HTTP head output and decoded icon assets were used to verify the original favicon rather than treating that modified tab icon as production evidence.
+- All 28 tests, production build and npm audit pass; zero vulnerabilities. No dependencies or application behaviour changed, and no new automated tests were needed for the static asset change.

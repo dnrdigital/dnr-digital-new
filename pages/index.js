@@ -18,7 +18,6 @@ export default function Home({ background }) {
       <Head>
         <title>DNR | Digital Consultancy</title>
         <meta name="description" content="Digital consulting, strategy, procurement and project management. Get in touch with DNR Digital." />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
       <Main background={background} />
     </>
