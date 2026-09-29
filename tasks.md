@@ -38,6 +38,7 @@
 - [ ] Resolve download-event semantics for this background/shuffle use case and budget required tracking requests.
 - [x] Implement durable last-good metadata, bounded refresh/retry behaviour and image-load fallback with an hourly production scheduler.
 - [x] Implement approved rotation/control with keyboard and reduced-motion support.
+- [x] Remove the redundant success message so the scenery control stays in place after a successful change.
 - [x] Test API failures, exhausted quota, concurrent/cold instances, repeat avoidance and attribution during transitions. Browser outage simulation retains the displayed image; see UAT log.
 - [x] Draft accurate application description, curation criteria and unresolved download-event question in `docs/unsplash-production.md`.
 - [ ] Capture final deployed desktop/mobile attribution evidence and submit only after the download-event requirement is resolved.

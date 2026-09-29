@@ -41,7 +41,6 @@ export default function Main({ background: initialBackground }) {
           setPrevious(recovering || useFallback ? null : background);
           setBackground(data);
           setFailedImage(null);
-          setMessage(`New scenery. Photo by ${data.user.name}.`);
           return;
         } catch {
           if (controller.signal.aborted) return;
