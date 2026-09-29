@@ -22,3 +22,5 @@ Environment: Node 24.19.0, clean `npm ci`, Next.js 15.5.26 production build at `
 The image-failure browser check used a temporary localhost proxy to replace the photo URL with an unavailable image. No fixture routes or failure flags were added to the application. An earlier preview was invalidated while dependencies were being replaced; only the clean-build checks above are acceptance evidence.
 
 Release checks still pending: replacement Unsplash key, Netlify environment/runtime settings, deployment smoke checks and GitHub's default-branch security rescan. Reduced-motion CSS is implemented but was not separately exercised in the browser.
+
+Netlify preview for PR #2 failed before build execution: `git@github.com: Permission denied (publickey)` while cloning `dnrdigital/dnr-digital-new`. Repository access must be restored before preview/deployment can be verified. Log: https://app.netlify.com/projects/dnr-digital/deploys/6abb881d320f0c00082cb6c1

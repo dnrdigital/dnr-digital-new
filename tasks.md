@@ -14,6 +14,7 @@
 - [x] Add regression coverage and record browser UAT.
 
 ## Release (requires approval)
+- [ ] Restore Netlify’s GitHub repository access: preview #2 fails while cloning with `Permission denied (publickey)` before the build runs.
 - [ ] Rotate the exposed Unsplash access key; configure the replacement in Netlify.
 - [ ] Review and approve the refresh PR, then merge/deploy.
 - [ ] Verify production and confirm GitHub closes all 50 alerts after the default branch updates.
