@@ -58,5 +58,11 @@
 - [x] Rotate bounded themed searches hourly; retain per-theme last-good batches and correct topic/collection configuration.
 - [x] Complete automated, packaging and desktop/mobile/failure browser verification (28 tests; build, audit and isolated packaged search refresh pass).
 - [x] Prepare the refinement changes and deployment instructions for PR review.
-- [ ] Review and merge/deploy the refinement PR after approval.
+- [x] PR #6 merged as `9d77d13`; production scheduler confirmed running the themed search on 29 September 2026.
 - [ ] Verify live themed pool after three successful production refreshes and review photo relevance/crops.
+
+## Text shadow and theme verification — 29 September 2026
+- [x] Inspect production refresh logs: first themed run at 13:39 BST saved 29 Quiet monumental photos; remaining themes await eligible hourly runs.
+- [x] Replace rectangular box shadows with letter-shaped text shadows on the heading, services and contact link.
+- [x] Verify desktop/mobile letter shadows, 28 tests, production build and clean audit; prepare fix PR.
+- [ ] Merge/deploy the shadow fix after review.

@@ -104,3 +104,10 @@ Quality 65 showed no obvious visual regression in the side-by-side review; resul
 - Local Save-Data fixture: zero automatic candidate requests after the initial image settled. Manual dice activation made exactly one candidate request, loaded a different photograph and matching credit, and returned the control to its available state.
 - Default configuration and legacy Wallpapers collection setting now use `pool-themes-v1`. Local/preview seed photos are not evidence of the new search aesthetics. After approved production deployment, Run now once and allow subsequent hourly runs to populate all three themes; review relevance and desktop/mobile crops. Custom collection/topic overrides continue to take precedence as documented.
 - Unsplash download-event semantics remain unresolved; this refinement does not claim production-access compliance or emit speculative tracking events.
+
+## 29 September 2026 — text shadow and theme-pool follow-up
+
+- Production Netlify function log inspected directly: 13:39:28 BST invocation returned fresh, 29 photos, remaining quota 49, theme quiet-monumental, query brutalist architecture. This is the first themed batch, not evidence that the other themes are being discarded.
+- The saved nextAttempt is 14:39:27 BST. With the hourly schedule, the 14:00 invocation should observe cooldown; the next two successful refreshes at 15:00 and 16:00 should add Otherworldly Earth and Hidden patterns. These future outcomes remain unverified. No manual invocation, cache mutation or schedule change was made during this investigation.
+- Replaced Tailwind shadow-2xl (rectangular box-shadow) with a subtle text-shadow on the heading, service line and contact link. Desktop visual review confirms shadows follow letter shapes. At 390 × 844, all three blocks compute box-shadow:none and text-shadow:rgba(0,0,0,0.3) 0px 2px 8px; document width remains 390px and the photo loads.
+- All 28 tests and the production build pass; npm audit reports zero vulnerabilities. No new tests added for this CSS-only change.
