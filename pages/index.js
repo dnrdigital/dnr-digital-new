@@ -1,25 +1,9 @@
-// pages/index.js
 import Head from "next/head";
 import Main from "@components/Main";
+import { getBackground } from "../lib/image-cache";
 
 export async function getServerSideProps() {
-  try {
-    const res = await fetch(`https://dnr.digital/api/imageCache`);
-    const json = await res.json();
-
-    return {
-      props: {
-        background: json.data || null, // Pass the data to the component
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching data in getServerSideProps:", error);
-    return {
-      props: {
-        background: null, // Pass null if there's an error
-      },
-    };
-  }
+  return { props: { background: await getBackground() } };
 }
 
 export default function Home({ background }) {
@@ -27,10 +11,10 @@ export default function Home({ background }) {
     <>
       <Head>
         <title>DNR | Digital Consultancy</title>
+        <meta name="description" content="Digital consulting, strategy, procurement and project management. Get in touch with DNR Digital." />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <Main background={background} />{" "}
-      {/* Pass the data to the Main component */}
+      <Main background={background} />
     </>
   );
 }

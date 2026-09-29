@@ -72,3 +72,13 @@
 .photo {
   filter: grayscale(20%) contrast(140%) brightness(80%);
 }
+a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transition {
+    transition: none;
+  }
+}
