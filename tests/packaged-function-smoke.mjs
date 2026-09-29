@@ -23,12 +23,13 @@ globalThis.fetch = async (input, options = {}) => {
   if (url.hostname === "api.unsplash.com") {
     discoveries++;
     assert.equal(options.headers.Authorization, "Client-ID smoke-test-key");
-    assert.equal(url.pathname, "/search/photos");
-    assert.equal(url.searchParams.get("query"), "brutalist architecture");
-    return Response.json({ results: [photo], total_pages: 5 }, { headers: { "x-ratelimit-remaining": "49" } });
+    assert.equal(url.pathname, "/photos/random");
+    assert.ok(["11978287", "1101855"].includes(url.searchParams.get("collections")));
+    const portrait = url.searchParams.get("orientation") === "portrait";
+    return Response.json([{ ...photo, id: `${photo.id}-${discoveries}`, width: portrait ? 1600 : 2400, height: portrait ? 2400 : 1600 }], { headers: { "x-ratelimit-remaining": "49" } });
   }
   assert.equal(url.hostname, "blobs.invalid", "Unexpected HTTP target; real network is never used");
-  assert.ok(url.pathname.includes("unsplash-photos/pool-themes-v1"));
+  assert.ok(url.pathname.includes("unsplash-photos/pool-curated-v1"));
   const method = (options.method || "GET").toUpperCase();
   if (method === "GET") {
     return saved ? Response.json(saved, { headers: { etag: String(revision) } }) : new Response(null, { status: 404 });
@@ -48,11 +49,11 @@ const scheduledRequest = () => new Request("https://example.invalid/refresh-phot
 });
 assert.equal((await handler(scheduledRequest(), { deploy: { context: "", published: false } })).status, 204);
 assert.equal(saved.status, "fresh");
-assert.equal(saved.images[0].id, photo.id);
+assert.equal(saved.images.length, 4);
 assert.equal(writes, 2, "Reservation and completed snapshot both written");
-assert.equal(discoveries, 1);
+assert.equal(discoveries, 4);
 await handler(null, production);
-assert.equal(discoveries, 1, "Cooldown must prevent a second discovery request");
+assert.equal(discoveries, 4, "Cooldown must prevent a second discovery request");
 await handler(scheduledRequest(), { deploy: { context: "deploy-preview", published: false } });
 assert.equal(writes, 2, "Preview must not write");
 console.log("Packaged function passed: SDK loads, refresh persists, cooldown and preview guard work (mock HTTP only).");

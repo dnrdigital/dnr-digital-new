@@ -8,7 +8,7 @@ Name: **DNR Digital — Change of scenery**
 
 Description:
 
-> DNR Digital is a digital consultancy website. It displays landscape photography selected through themed Unsplash searches behind its services and contact details. Visitors see different photographs on return visits and can explore another photograph using “Change of scenery”. Images are hotlinked directly from Unsplash with photographer and Unsplash attribution. A shared metadata cache keeps the experience available during API outages and limits discovery requests.
+> DNR Digital is a digital consultancy website. It displays photography from two curated Unsplash collections, matching landscape or portrait images to the viewport behind its services and contact details. Visitors see different photographs on return visits and can explore another photograph using “Change of scenery”. Images are hotlinked directly from Unsplash with photographer and Unsplash attribution. A shared metadata cache keeps the experience available during API outages and limits discovery requests.
 
 Website: https://dnr.digital/
 
@@ -33,9 +33,9 @@ The implementation retains complete `links.download_location` values, including 
 
 ## Selection criteria
 
-Approved directions: Quiet monumental (brutalist/concrete/monumental architecture), Otherworldly Earth (volcanic landscapes, dunes, glaciers) and Hidden patterns (aerial farmland, architectural repetition, terraces). One hourly search rotates the phrases and pages, maintains a last-good batch per theme, and deduplicates the combined pool. Landscape/high-content-filter requests plus minimum dimensions and aspect-ratio checks exclude unsuitable sizes; they cannot guarantee artistic relevance or composition. Review both wide desktop and narrow mobile crops after production fills the pool.
+Approved sources: WEIRD by Tapage & Boldie (`11978287`) and Surreal by Peter Broomfield (`1101855`). Four hourly requests cover both collections and both orientations; each batch retains up to 20 suitable photos, with independent last-good retention and failure backoff. The combined pool deduplicates images and holds at most 80. Requests use high content filtering, with minimum long/short dimensions of 1920/1080 and aspect ratio at most 2.5:1. Initial image choice, dice changes and viewport rotations use the matching orientation. This improves cropping but cannot guarantee composition or relevance. Verify all four live batch counts after deployment.
 
-Leave collection/topic environment overrides blank to use searches. The previous default `bo8jQKTaE0Y` is a **Wallpapers topic**, not a collection owned by the user; earlier documentation was incorrect. That legacy setting now selects the approved themes. A genuine collection ID still permits manual curation; an explicit `UNSPLASH_TOPIC_ID=wallpapers` selects the Wallpapers topic correctly. No external collections are created or edited.
+Leave collection/topic environment overrides blank to use these collections. The previous default `bo8jQKTaE0Y` is a Wallpapers topic; this legacy setting now selects the curated defaults. Other collection/topic overrides remain supported in both orientations. No external collections are created or edited. Local bundled seed images remain a landscape-only fallback until the curated cache is populated.
 
 Inline previews are derived from the supplied BlurHash; final images and the single prepared next image remain hotlinked. Preparing an image does not claim a download/use event. The unresolved tracking question above still applies. Time-of-day selection remains deferred.
 

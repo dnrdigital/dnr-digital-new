@@ -86,3 +86,11 @@
 - [x] Add regression checks for all three themed batches and useful counts/failure/retry logging.
 - [x] Complete 31 tests, production build, clean audit and isolated packaged-function verification; prepare fix PR.
 - [ ] After approved merge/deploy, verify automatic refresh logs and positive counts for all three themes in production.
+
+## Curated collections and viewport orientation — approved 29 September 2026
+- [x] Agree two curated sources, portrait/landscape selection, four hourly discovery requests and up to 80 cached photos.
+- [x] Base work on merged scheduler fix PR #10 (`6a76997`). Live automatic scheduler recovery remains unverified here.
+- [x] Add per-collection/orientation batches, atomic refresh reservations, independent last-good data/backoff and quota stop behaviour.
+- [x] Add media-qualified initial preloads, orientation-aware dice/prefetch, crossfade on orientation changes and history preservation across orientations.
+- [x] Complete 34 source tests, build, clean audit, packaged-function checks and desktop/mobile/rapid-rotation/failure UAT; prepare review PR.
+- [ ] After approved deployment, run the scheduler once, verify all four live batch counts, and review actual collection images on desktop and portrait mobile.
