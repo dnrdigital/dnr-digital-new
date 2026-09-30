@@ -20,7 +20,7 @@ export default function Home({ backgrounds }) {
     <>
       <Head>
         <title>DNR | Digital Consultancy</title>
-        <meta name="description" content="Digital consulting, strategy, procurement and project management. Get in touch with DNR Digital." />
+        <meta name="description" content="Digital strategy, procurement, project management and delivery. Get in touch with DNR Digital." />
         {Object.entries(backgrounds).map(([orientation, photo]) => photo &&
           <link key={orientation} rel="preload" as="image" media={`(orientation: ${orientation})`}
             imageSrcSet={photoSrcSet(photo.urls.full)} imageSizes="100vw" />)}

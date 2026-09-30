@@ -4,7 +4,28 @@ import { useEffect, useRef, useState } from "react";
 import loadBackground from "../lib/load-background";
 import unsplashLoader from "../lib/unsplash-loader";
 
+// Keep draft navigation and placeholder copy out of the live release.
+const serviceSlidesEnabled = false;
+
+const services = [
+  { id: "strategy", label: "strategy" },
+  { id: "procurement", label: "procurement" },
+  { id: "project-management", label: "project\u00a0management" },
+  { id: "delivery", label: "delivery" },
+];
+
+function contrastingText(color) {
+  const channels = color.slice(1).match(/.{2}/g).map((hex) => {
+    const value = parseInt(hex, 16) / 255;
+    return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+  });
+  const luminance = channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+  return luminance > .179 ? "#000000" : "#ffffff";
+}
+
 export default function Main({ backgrounds }) {
+  const titleSlide = useRef(null);
+  const [awayFromTitle, setAwayFromTitle] = useState(false);
   const [background, setBackground] = useState(null);
   const [orientation, setOrientation] = useState(null);
   const [displayOrientation, setDisplayOrientation] = useState(null);
@@ -25,6 +46,17 @@ export default function Main({ backgrounds }) {
   const visiblePhoto = ready ? (useFallback ? null : background) : previous;
   const creditedPhoto = visiblePhoto || (useFallback ? null : background);
   const photoCredit = creditedPhoto?.user?.username;
+  const photoColor = useFallback ? null : (visiblePhoto?.color || background.color);
+  const slideColor = /^#[0-9a-f]{6}$/i.test(photoColor) ? photoColor : "#10293a";
+
+  useEffect(() => {
+    if (!serviceSlidesEnabled) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setAwayFromTitle(entry.intersectionRatio < .5);
+    }, { threshold: .5 });
+    observer.observe(titleSlide.current);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(orientation: portrait)");
@@ -135,7 +167,12 @@ export default function Main({ backgrounds }) {
   }
 
   return (
-    <main
+    <main style={{ "--slide-color": slideColor, "--slide-text": contrastingText(slideColor) }}>
+    <section
+      id="title"
+      ref={titleSlide}
+      tabIndex={-1}
+      aria-labelledby="site-title"
       className="min-h-dvh flex items-center relative group overflow-hidden"
       style={{ backgroundColor: "#10293a" }}
     >
@@ -213,23 +250,11 @@ export default function Main({ backgrounds }) {
           </a>
         </div>
       )}
-      <div className="scenery-control">
-        <button type="button" className="scenery-die" onClick={() => changeScenery()}
-          aria-disabled={busy} aria-label="Change of scenery" aria-describedby="scenery-hint" aria-busy={busy}>
-          <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" className={busy ? "die-tumbling" : ""}>
-            <rect x="3" y="3" width="26" height="26" rx="6" fill="none" stroke="currentColor" strokeWidth="2" />
-            {[ [10,10], [22,10], [16,16], [10,22], [22,22] ].map(([cx, cy]) =>
-              <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2" fill="currentColor" />)}
-          </svg>
-          <span id="scenery-hint">Change of scenery</span>
-        </button>
-        <span role="status" className="scenery-status">{message}</span>
-      </div>
       <div
         className={`text-center w-4/5 mx-auto z-10 py-16 ${!visiblePhoto ? "text-white" : "mix-blend-plus-lighter"}`}
         style={{ color: visiblePhoto?.color }}
       >
-        <h1 className="-my-4 md:-my-8 lg:-my-16 xl:-my-20 font-display font-bold group-hover:text-white group-focus-within:text-white group-hover:opacity-80 group-focus-within:opacity-80 transition duration-1000 scenery-text intro-heading">
+        <h1 id="site-title" className="-my-4 md:-my-8 lg:-my-16 xl:-my-20 font-display font-bold group-hover:text-white group-focus-within:text-white group-hover:opacity-80 group-focus-within:opacity-80 transition duration-1000 scenery-text intro-heading">
           <span className="text-fit">
             <span>
               <span>DNR.DIGITAL</span>
@@ -241,11 +266,23 @@ export default function Main({ backgrounds }) {
           <span className="text-fit">
             <span>
               <span>
-                Consulting | strategy | procurement | project&nbsp;management
+                {services.map(({ id, label }, index) => (
+                  <span key={id}>
+                    {index > 0 && <span className="service-separator" aria-hidden="true">·</span>}
+                    {serviceSlidesEnabled
+                      ? <a className="contact-link service-link" href={`#${id}`}>{label}</a>
+                      : <span className="contact-link service-link">{label}</span>}
+                  </span>
+                ))}
               </span>
             </span>
             <span aria-hidden="true">
-              Consulting | strategy | procurement | project&nbsp;management
+              {services.map(({ id, label }, index) => (
+                <span key={id}>
+                  {index > 0 && <span className="service-separator">·</span>}
+                  {label}
+                </span>
+              ))}
             </span>
           </span>
         </p>
@@ -260,6 +297,37 @@ export default function Main({ backgrounds }) {
           </span>
         </p>
       </div>
+    </section>
+    {serviceSlidesEnabled && services.map(({ id, label }) => (
+      <section key={id} id={id} className="service-slide" tabIndex={-1} aria-labelledby={`${id}-heading`}>
+        <div className="service-content">
+          <h2 id={`${id}-heading`} className="font-display">{label.replace("\u00a0", " ")}</h2>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        </div>
+      </section>
+    ))}
+    <div className="scenery-control">
+      {awayFromTitle ? (
+        <a className="scenery-die" href="#title" onClick={() => titleSlide.current.focus({ preventScroll: true })}>
+          <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="6" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M16 23V9m-6 6 6-6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="scenery-label">Back to top</span>
+        </a>
+      ) : (
+        <button type="button" className="scenery-die" onClick={() => changeScenery()}
+          aria-disabled={busy} aria-label="Want a new perspective?" aria-busy={busy}>
+          <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" className={busy ? "die-tumbling" : ""}>
+            <rect x="3" y="3" width="26" height="26" rx="6" fill="none" stroke="currentColor" strokeWidth="2" />
+            {[ [10,10], [22,10], [16,16], [10,22], [22,22] ].map(([cx, cy]) =>
+              <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2" fill="currentColor" />)}
+          </svg>
+          <span className="scenery-label">Want a new perspective?</span>
+        </button>
+      )}
+      <span role="status" className="scenery-status">{!awayFromTitle && message}</span>
+    </div>
     </main>
   );
 }
