@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+html { scroll-behavior: smooth; }
+
+.service-slide {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem max(1.5rem, env(safe-area-inset-right)) 7rem max(1.5rem, env(safe-area-inset-left));
+  background-color: var(--slide-color, #10293a);
+  color: var(--slide-text, white);
+  text-align: center;
+}
+.service-content { width: 100%; max-width: 70rem; }
+.service-slide h2 {
+  margin-bottom: 1.5rem;
+  font-size: clamp(2.25rem, 7vw, 7rem);
+  line-height: 1.05;
+  /* Allow this heading to wrap on small screens, unlike the title service line. */
+  white-space: normal;
+}
+.service-slide p {
+  max-width: 32ch;
+  margin-inline: auto;
+  font-size: clamp(1.5rem, 3.2vw, 3rem);
+  line-height: 1.4;
+}
+.service-link { --link-padding: .4em; padding-block: var(--link-padding); }
+.service-separator { margin-inline: .5em; }
+#title:focus, .service-slide:focus { outline: none; }
+
 .text-fit {
   display: flex;
   container-type: inline-size;
@@ -95,7 +125,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -.12em;
+  bottom: calc(var(--link-padding, 0em) - .12em);
   height: .06em;
   min-height: 1px;
   background: currentColor;
@@ -125,15 +155,17 @@ a:focus-visible {
 }
 
 .scenery-control {
-  position: absolute;
+  position: fixed;
   bottom: max(1rem, env(safe-area-inset-bottom));
   right: max(1rem, env(safe-area-inset-right));
   z-index: 20;
   color: white;
   font-family: Arial, sans-serif;
 }
+.scenery-label { width: 6rem; text-align: left; line-height: 1.25; }
 .scenery-die {
   display: flex;
+  margin-left: auto;
   align-items: center;
   gap: .6rem;
   padding: .5rem .8rem;
@@ -143,7 +175,7 @@ a:focus-visible {
   font-size: .75rem;
   cursor: pointer;
 }
-.scenery-die svg { transition: transform .25s ease; }
+.scenery-die svg { flex-shrink: 0; transition: transform .25s ease; }
 .scenery-die:hover svg { transform: rotate(-12deg); }
 .scenery-die:focus-visible { outline: 2px solid white; outline-offset: 4px; }
 .scenery-die[aria-disabled="true"] { cursor: wait; }
@@ -168,6 +200,7 @@ a:focus-visible {
 @keyframes tumble { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .intro-heading, .intro-subtitle, .intro-contact { animation: none; }
   .contact-link, .contact-link::after { transition: none; }
   .contact-link:hover, .contact-link:focus-visible { transform: none; }

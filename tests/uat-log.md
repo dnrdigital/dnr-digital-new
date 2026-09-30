@@ -143,3 +143,30 @@ Quality 65 showed no obvious visual regression in the side-by-side review; resul
 - Forced 503 responses on an orientation change retain the previous image/credit, show retry feedback and leave the die usable. Restoring the API and pressing Enter on the die loads a matching landscape and clears feedback. Resizing 844×390 → 1200×800 keeps the same photo. Browser error/warning log is empty after these checks.
 - Local production API returns the requested orientation for both valid values and 400 for invalid/array orientation parameters. Automated history tests verify exhausting one orientation does not reset the other.
 - Production collection eligibility, counts and actual curation/crops remain pending deployment and the first authenticated refresh. The checked-in landscape seed remains the fallback until `pool-curated-v1` is populated.
+# 30 September 2026 — service slides
+
+- Approved layout implemented on `feature/service-slides`: strategy, procurement, project management and delivery link to four centred, full-screen sections with lorem ipsum. Links share the contact lift/underline styles. The photograph remains confined to the title slide; all service backgrounds use its metadata colour.
+- Local production preview at `http://127.0.0.1:3105`: desktop 1280 × 720 and mobile 390 × 844 verified. All four service links land at their section's top and focus the destination. Desktop sections measure 720px high. Mobile project management wraps cleanly, and the document has no horizontal overflow.
+- Fixed control stays 16px from the bottom-left edges: New perspective changes the photo on the title; the up arrow in the die outline returns to the title. Keyboard Enter navigates to project management and back; return restores focus to the title. Dice activation retains keyboard focus, changes the loaded image and credit, and clears its busy state.
+- Observed service background matching the photo backing for both light `rgb(243, 243, 243)` and dark `rgb(12, 38, 12)` images, with black/white text respectively. Service sections contain no image elements. Console warning/error log is empty.
+- Smooth scrolling is active in computed desktop CSS. The reduced-motion rule switches it to auto and retains the existing animation reductions; OS reduced-motion preference was not changed for this check.
+- Node 24: 34 tests pass, production build passes, npm audit reports zero vulnerabilities. No dependency changes. Production merge/deployment remains pending approval.
+# 30 September 2026 — service slide follow-up
+
+- Perspective control restored to bottom-right; return arrow remains bottom-left. New label wraps naturally into “Take a new” / “perspective”, with a non-shrinking 32px die. At 390 × 844 the control is 48px high, 16px from the right/bottom content edges, and the two-line label is 30px high. Service dividers are centred dots with .5em spacing on either side, including the hidden text-fit sizing copy.
+- Reported cathedral checked against the actual browser image: source `sn_GTCzcBqo`, stored dimensions 4195 × 2797; decoded responsive image 792 × 528, confirming landscape. Local bundled metadata contains 30 landscape photos and no portraits. The existing explicit cross-orientation fallback therefore explains a landscape image in portrait; it does not establish an incorrect landscape selection. Clarification requested before changing selection behaviour.
+- Mobile image and title both cover the 375 × 844 content viewport with no horizontal overflow. 34 automated tests and production build pass; npm audit reports zero vulnerabilities. Image-selection code is unchanged in this follow-up.
+# 30 September 2026 — shared bottom-right control
+
+- Duncan clarified that both states must occupy the same bottom-right position and changed the title label to “Want a new perspective?”. Both states now use one shared position and a 6rem label width; the perspective wording wraps onto two lines.
+- Browser at 1280 × 720: both button states have identical bounds (left 1085.8125, top 656, width 163.1875, height 48), with 16px right/bottom offsets inside the content viewport. Keyboard Enter on strategy scrolls to its slide and switches the control to Back to top. Current user preview also shows the updated two-line wording.
+- All 34 tests and production build pass; npm audit reports zero vulnerabilities. This supersedes the earlier instruction to keep the return arrow on the left.
+# 30 September 2026 — matching underline gaps
+
+- Service links' .4em vertical click-area padding was pushing the underline away from the text. The shared underline offset now accounts for that padding without changing the hit area or layout.
+- Browser computed styles confirm all four service links and Get in touch have the same .120em offset below their text content. Keyboard focus still shows the shared lift and underline. 34 tests and production build pass; npm audit reports zero vulnerabilities.
+# 30 September 2026 — approved visual-only release
+
+- Duncan approved publishing the visual updates with service navigation inactive. A disabled source flag preserves the draft slide implementation while rendering service labels as non-interactive spans and omitting all placeholder sections from the published page.
+- Local production browser: zero service anchors, zero service slides, no Lorem ipsum in the page, and document height equals viewport height (720px). Clicking strategy leaves the URL hash empty and scroll position at zero. Contact remains a mailto link; Want a new perspective? remains the active photo control.
+- All 34 tests and production build pass; npm audit reports zero vulnerabilities. Live deployment verification follows publication.

@@ -1,5 +1,16 @@
 # Project refresh
 
+## Service slides — approved 30 September 2026
+- [x] Prepare visual-only release: render inactive service text and hide draft slides; retain the finished slide implementation behind a disabled flag.
+- [ ] Publish approved visual updates and verify the live site.
+- [x] Match service underline spacing to the contact link while preserving the service links' larger click areas.
+- [x] Follow-up: use a compact two-line “Want a new perspective?” label and replace service dividers with spaced dots. Both control states now share the same size and bottom-right position, as clarified by Duncan.
+- [ ] Clarify reported background mismatch: cathedral source is landscape; local seed has no portrait photos and intentionally falls back across orientations.
+- [x] Agree four full-screen, colour-matched service sections and bottom-left contextual dice/up-arrow control.
+- [x] Update service wording and New perspective label; add contact-style links, centred placeholder text and smooth anchors with reduced-motion support.
+- [x] Verify desktop/mobile navigation, keyboard use, colour matching and photo rotation; 34 tests, production build and audit pass (zero vulnerabilities). See `tests/uat-log.md`.
+- [x] Duncan approved publishing the visual updates with service navigation inactive on 30 September 2026.
+
 ## Review and security
 - [x] Review current functionality, repository state and open GitHub alerts (29 September 2026).
 - [x] Confirm scope: preserve the design; fix reliability, performance and accessibility.
